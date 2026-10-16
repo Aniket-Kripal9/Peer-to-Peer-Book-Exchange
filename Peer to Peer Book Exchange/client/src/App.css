@@ -1,0 +1,71 @@
+/* ===== Global Styles ===== */
+
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #3498db;
+  --bg-light: #f4f6f8;
+  --text-dark: #2c3e50;
+  --text-muted: #7f8c8d;
+  --white: #ffffff;
+  --border-color: #dee2e6;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  padding-top: 20px;
+  padding-bottom: 40px;
+}
+
+/* ===== Reusable Utility Classes ===== */
+
+.section-title {
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+}
+
+.btn-primary-custom {
+  background-color: var(--secondary-color);
+  border: none;
+  color: var(--white);
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary-custom:hover {
+  background-color: var(--primary-color);
+  color: var(--white);
+}
+
+.card-custom {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background-color: var(--white);
+}
+
+.card-custom:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
