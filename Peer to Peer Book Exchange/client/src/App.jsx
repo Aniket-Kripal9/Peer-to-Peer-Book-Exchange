@@ -1,5 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 
 // Pages (will be created in upcoming commits)
 // import HomePage from './pages/HomePage';
@@ -8,15 +10,11 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // import AddBookPage from './pages/AddBookPage';
 // import DashboardPage from './pages/DashboardPage';
 
-// Components (will be created in upcoming commits)
-// import Navbar from './components/Navbar';
-// import Footer from './components/Footer';
-
 function App() {
   return (
     <Router>
       <div className="app-container">
-        {/* <Navbar /> */}
+        <Navbar />
         <main className="main-content">
           <Routes>
             {/* <Route path="/" element={<HomePage />} /> */}
@@ -30,14 +28,14 @@ function App() {
                 <div className="container text-center mt-5">
                   <h2>🚧 BookSwap</h2>
                   <p className="text-muted">
-                    Project setup complete! Components coming soon...
+                    Navbar & Footer are live! Pages coming soon...
                   </p>
                 </div>
               }
             />
           </Routes>
         </main>
-        {/* <Footer /> */}
+        <Footer />
       </div>
     </Router>
   );
