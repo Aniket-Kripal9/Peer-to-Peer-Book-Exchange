@@ -136,3 +136,29 @@ body {
   height: 100%;
   object-fit: cover;
 }
+
+/* ===== Search Bar ===== */
+
+.search-bar-wrapper {
+  background-color: var(--white);
+  padding: 20px 24px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-color);
+}
+
+.search-input:focus {
+  box-shadow: none;
+  border-color: var(--secondary-color);
+}
+
+.category-select:focus {
+  box-shadow: none;
+  border-color: var(--secondary-color);
+}
+
+/* ===== Empty State ===== */
+
+.empty-state-icon {
+  font-size: 4rem;
+}
