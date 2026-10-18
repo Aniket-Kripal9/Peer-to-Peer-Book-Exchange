@@ -134,3 +134,15 @@ body {
   font-weight: 700;
   font-size: 1.2rem;
 }
+
+/* ===== Add Book Page ===== */
+
+.success-icon {
+  font-size: 4rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
+}
