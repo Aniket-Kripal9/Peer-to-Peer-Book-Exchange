@@ -6,9 +6,7 @@ import HomePage from "./pages/HomePage";
 import BooksPage from "./pages/BooksPage";
 import BookDetailPage from "./pages/BookDetailPage";
 import AddBookPage from "./pages/AddBookPage";
-
-// Pages (will be created in upcoming commits)
-// import DashboardPage from './pages/DashboardPage';
+import DashboardPage from "./pages/DashboardPage";
 
 function App() {
   return (
@@ -21,7 +19,7 @@ function App() {
             <Route path="/books" element={<BooksPage />} />
             <Route path="/books/:id" element={<BookDetailPage />} />
             <Route path="/add-book" element={<AddBookPage />} />
-            {/* <Route path="/dashboard" element={<DashboardPage />} /> */}
+            <Route path="/dashboard" element={<DashboardPage />} />
           </Routes>
         </main>
         <Footer />

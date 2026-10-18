@@ -146,3 +146,76 @@ body {
   border-color: var(--secondary-color);
   box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
 }
+
+/* ===== Dashboard Page ===== */
+
+/* Tabs */
+.dashboard-tabs {
+  border-bottom: 2px solid var(--border-color);
+}
+
+.dashboard-tabs .nav-link {
+  color: var(--text-muted);
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 12px 20px;
+}
+
+.dashboard-tabs .nav-link:hover {
+  color: var(--primary-color);
+  border-color: transparent transparent var(--border-color);
+}
+
+.dashboard-tabs .nav-link.active {
+  color: var(--secondary-color);
+  background-color: transparent;
+  border-color: transparent transparent var(--secondary-color);
+}
+
+/* White panel wrapper (used for table & empty states) */
+.dashboard-panel {
+  background-color: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+/* Request cards */
+.request-card {
+  background-color: var(--white);
+  border: 1px solid var(--border-color);
+  border-left-width: 4px;
+  border-radius: 10px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.request-card.status-pending {
+  border-left-color: #f39c12;
+}
+
+.request-card.status-accepted {
+  border-left-color: #27ae60;
+}
+
+.request-card.status-rejected {
+  border-left-color: #e74c3c;
+}
+
+.request-message {
+  background-color: var(--bg-light);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text-muted);
+}
+
+/* Smaller avatar variant (reuses .owner-avatar from the detail page) */
+.owner-avatar.avatar-sm {
+  width: 40px;
+  height: 40px;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
