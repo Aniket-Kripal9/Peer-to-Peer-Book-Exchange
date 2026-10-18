@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import RequestCard from "../components/RequestCard";
 
 // ---------- Dummy data (will be replaced with API calls later) ----------
-// Book IDs reuse the sample books so the "View" links open real detail pages.
 
 const initialListings = [
   {
@@ -278,6 +277,12 @@ function DashboardPage() {
                         </td>
                         <td className="text-end">
                           <div className="d-flex gap-2 justify-content-end flex-wrap">
+                            <Link
+                              to={`/edit-book/${book._id}`}
+                              className="btn btn-sm btn-outline-secondary"
+                            >
+                              ✏️ Edit
+                            </Link>
                             <button
                               className="btn btn-sm btn-outline-primary"
                               onClick={() => handleToggleAvailability(book._id)}

@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import BooksPage from "./pages/BooksPage";
 import BookDetailPage from "./pages/BookDetailPage";
 import AddBookPage from "./pages/AddBookPage";
+import EditBookPage from "./pages/EditBookPage";
 import DashboardPage from "./pages/DashboardPage";
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
             <Route path="/books" element={<BooksPage />} />
             <Route path="/books/:id" element={<BookDetailPage />} />
             <Route path="/add-book" element={<AddBookPage />} />
+            <Route path="/edit-book/:id" element={<EditBookPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
           </Routes>
         </main>
