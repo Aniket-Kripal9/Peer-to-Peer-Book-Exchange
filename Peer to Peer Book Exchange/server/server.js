@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import bookRoutes from "./routes/books.js";
 
 dotenv.config();
 
@@ -12,11 +13,10 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Check if MONGO_URI exists
+// Check MONGO_URI
 if (!process.env.MONGO_URI) {
   console.error("❌ ERROR: MONGO_URI is not defined in server/.env file");
 } else {
-  // MongoDB Connection
   mongoose
     .connect(process.env.MONGO_URI)
     .then(() => console.log("✅ Connected to MongoDB Atlas"))
@@ -27,6 +27,9 @@ if (!process.env.MONGO_URI) {
 app.get("/", (req, res) => {
   res.send("BookSwap Backend is running...");
 });
+
+// API Routes
+app.use("/api/books", bookRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
