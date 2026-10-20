@@ -16,9 +16,7 @@ function BookCard({ book }) {
         {/* Book Image */}
         <div className="book-image-wrapper">
           <img
-            src={
-              book.image || "https://via.placeholder.com/300x400?text=No+Image"
-            }
+            src={book.image || "https://picsum.photos/seed/nobook/300/400"}
             className="card-img-top book-image"
             alt={book.title}
           />

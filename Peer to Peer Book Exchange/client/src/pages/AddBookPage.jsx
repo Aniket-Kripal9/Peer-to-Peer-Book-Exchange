@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { createBook, CURRENT_USER } from "../api";
 
 const categories = [
   "Computer Science",
@@ -29,73 +30,69 @@ const initialFormData = {
 function AddBookPage() {
   const [formData, setFormData] = useState(initialFormData);
   const [submitted, setSubmitted] = useState(false);
+  const [createdTitle, setCreatedTitle] = useState("");
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // Validate form
   const validate = () => {
     const newErrors = {};
-
-    if (!formData.title.trim()) {
-      newErrors.title = "Book title is required.";
-    }
-    if (!formData.author.trim()) {
-      newErrors.author = "Author name is required.";
-    }
-    if (!formData.category) {
-      newErrors.category = "Please select a category.";
-    }
-    if (!formData.condition) {
-      newErrors.condition = "Please select a condition.";
-    }
+    if (!formData.title.trim()) newErrors.title = "Book title is required.";
+    if (!formData.author.trim()) newErrors.author = "Author name is required.";
+    if (!formData.category) newErrors.category = "Please select a category.";
+    if (!formData.condition) newErrors.condition = "Please select a condition.";
     if (!formData.description.trim()) {
       newErrors.description = "Please add a short description.";
     } else if (formData.description.trim().length < 10) {
       newErrors.description = "Description must be at least 10 characters.";
     }
-
     return newErrors;
   };
 
-  // Handle form submit
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
 
-    // Simulate API call
-    console.log("Book submitted:", formData);
-    setSubmitted(true);
+    try {
+      setSubmitting(true);
+      setApiError("");
+      await createBook({
+        ...formData,
+        ownerName: CURRENT_USER.name,
+        ownerDepartment: CURRENT_USER.department,
+        ownerSemester: CURRENT_USER.semester,
+        available: true,
+      });
+      setCreatedTitle(formData.title);
+      setSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      setApiError(
+        err.response?.data?.message ||
+          "Failed to list book. Is the backend running?",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // Reset form to add another book
   const handleAddAnother = () => {
     setFormData(initialFormData);
     setErrors({});
+    setApiError("");
     setSubmitted(false);
   };
 
-  // --- Success State ---
   if (submitted) {
     return (
       <div className="container py-5">
@@ -105,11 +102,10 @@ function AddBookPage() {
               <div className="success-icon mb-3">✅</div>
               <h3 className="fw-bold mb-2">Book Listed Successfully!</h3>
               <p className="text-muted mb-4">
-                "<strong>{formData.title}</strong>" by {formData.author} has
-                been added to the exchange. Other students can now see it and
-                send you exchange requests.
+                &quot;<strong>{createdTitle}</strong>&quot; has been added to
+                the exchange.
               </p>
-              <div className="d-flex justify-content-center gap-3">
+              <div className="d-flex justify-content-center gap-3 flex-wrap">
                 <button
                   className="btn btn-primary-custom"
                   onClick={handleAddAnother}
@@ -119,6 +115,9 @@ function AddBookPage() {
                 <Link to="/books" className="btn btn-outline-secondary">
                   📚 Browse Books
                 </Link>
+                <Link to="/dashboard" className="btn btn-outline-secondary">
+                  📊 Dashboard
+                </Link>
               </div>
             </div>
           </div>
@@ -127,22 +126,20 @@ function AddBookPage() {
     );
   }
 
-  // --- Form State ---
   return (
     <div className="container py-4">
       <div className="row justify-content-center">
         <div className="col-md-8 col-lg-7">
-          {/* Page Header */}
           <h2 className="section-title">List a Book for Exchange</h2>
           <p className="text-muted mb-4">
-            Fill in the details below to list a book you no longer need. Other
-            students will be able to browse and request it.
+            Fill in the details below. Listing as{" "}
+            <strong>{CURRENT_USER.name}</strong>.
           </p>
 
-          {/* Form Card */}
           <div className="card card-custom p-4">
+            {apiError && <div className="alert alert-danger">{apiError}</div>}
+
             <form onSubmit={handleSubmit} noValidate>
-              {/* Title */}
               <div className="mb-3">
                 <label htmlFor="title" className="form-label fw-semibold">
                   Book Title <span className="text-danger">*</span>
@@ -152,7 +149,7 @@ function AddBookPage() {
                   className={`form-control ${errors.title ? "is-invalid" : ""}`}
                   id="title"
                   name="title"
-                  placeholder="e.g., Data Structures and Algorithms"
+                  placeholder="e.g., Let Us C"
                   value={formData.title}
                   onChange={handleChange}
                 />
@@ -161,7 +158,6 @@ function AddBookPage() {
                 )}
               </div>
 
-              {/* Author */}
               <div className="mb-3">
                 <label htmlFor="author" className="form-label fw-semibold">
                   Author <span className="text-danger">*</span>
@@ -171,7 +167,7 @@ function AddBookPage() {
                   className={`form-control ${errors.author ? "is-invalid" : ""}`}
                   id="author"
                   name="author"
-                  placeholder="e.g., Cormen, Leiserson"
+                  placeholder="e.g., Yashavant Kanetkar"
                   value={formData.author}
                   onChange={handleChange}
                 />
@@ -180,7 +176,6 @@ function AddBookPage() {
                 )}
               </div>
 
-              {/* Edition */}
               <div className="mb-3">
                 <label htmlFor="edition" className="form-label fw-semibold">
                   Edition
@@ -190,22 +185,19 @@ function AddBookPage() {
                   className="form-control"
                   id="edition"
                   name="edition"
-                  placeholder="e.g., 3rd Edition (optional)"
+                  placeholder="e.g., 19th Edition (optional)"
                   value={formData.edition}
                   onChange={handleChange}
                 />
               </div>
 
-              {/* Category & Condition Row */}
               <div className="row g-3 mb-3">
                 <div className="col-md-6">
                   <label htmlFor="category" className="form-label fw-semibold">
                     Category <span className="text-danger">*</span>
                   </label>
                   <select
-                    className={`form-select ${
-                      errors.category ? "is-invalid" : ""
-                    }`}
+                    className={`form-select ${errors.category ? "is-invalid" : ""}`}
                     id="category"
                     name="category"
                     value={formData.category}
@@ -228,9 +220,7 @@ function AddBookPage() {
                     Condition <span className="text-danger">*</span>
                   </label>
                   <select
-                    className={`form-select ${
-                      errors.condition ? "is-invalid" : ""
-                    }`}
+                    className={`form-select ${errors.condition ? "is-invalid" : ""}`}
                     id="condition"
                     name="condition"
                     value={formData.condition}
@@ -249,7 +239,6 @@ function AddBookPage() {
                 </div>
               </div>
 
-              {/* Description */}
               <div className="mb-3">
                 <label htmlFor="description" className="form-label fw-semibold">
                   Description <span className="text-danger">*</span>
@@ -261,16 +250,15 @@ function AddBookPage() {
                   id="description"
                   name="description"
                   rows="4"
-                  placeholder="Describe the book's condition, any markings, missing pages, etc."
+                  placeholder="Condition, markings, missing pages, etc."
                   value={formData.description}
                   onChange={handleChange}
-                ></textarea>
+                />
                 {errors.description && (
                   <div className="invalid-feedback">{errors.description}</div>
                 )}
               </div>
 
-              {/* Image URL */}
               <div className="mb-4">
                 <label htmlFor="image" className="form-label fw-semibold">
                   Image URL
@@ -280,21 +268,18 @@ function AddBookPage() {
                   className="form-control"
                   id="image"
                   name="image"
-                  placeholder="https://example.com/book-cover.jpg (optional)"
+                  placeholder="https://example.com/cover.jpg (optional)"
                   value={formData.image}
                   onChange={handleChange}
                 />
-                <small className="text-muted">
-                  Paste a direct link to an image of your book (optional).
-                </small>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 className="btn btn-primary-custom btn-lg w-100"
+                disabled={submitting}
               >
-                📚 List My Book
+                {submitting ? "Listing..." : "📚 List My Book"}
               </button>
             </form>
           </div>

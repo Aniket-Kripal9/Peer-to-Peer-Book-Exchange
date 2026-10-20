@@ -1,47 +1,36 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import BookCard from "../components/BookCard";
-
-// Dummy data — will be replaced with API calls later
-const recentBooks = [
-  {
-    _id: "1",
-    title: "Data Structures and Algorithms",
-    author: "Cormen, Leiserson",
-    category: "Computer Science",
-    condition: "Good",
-    available: true,
-    image: "https://via.placeholder.com/300x400?text=DSA",
-  },
-  {
-    _id: "2",
-    title: "Engineering Mathematics",
-    author: "B.S. Grewal",
-    category: "Mathematics",
-    condition: "Like New",
-    available: true,
-    image: "https://via.placeholder.com/300x400?text=Math",
-  },
-  {
-    _id: "3",
-    title: "Organic Chemistry",
-    author: "Morrison & Boyd",
-    category: "Chemistry",
-    condition: "Fair",
-    available: true,
-    image: "https://via.placeholder.com/300x400?text=Chemistry",
-  },
-  {
-    _id: "4",
-    title: "Introduction to Psychology",
-    author: "Robert Feldman",
-    category: "Humanities",
-    condition: "New",
-    available: false,
-    image: "https://via.placeholder.com/300x400?text=Psychology",
-  },
-];
+import { getBooks } from "../api";
 
 function HomePage() {
+  const [recentBooks, setRecentBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRecent = async () => {
+      try {
+        const { data } = await getBooks();
+        if (!cancelled) setRecentBooks(data.slice(0, 4));
+      } catch (err) {
+        console.error(err);
+        if (!cancelled)
+          setError("Could not load books. Is the backend running?");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchRecent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div>
       {/* ===== HERO SECTION ===== */}
@@ -53,7 +42,7 @@ function HomePage() {
             List the books you no longer need and find the ones you do — for
             free!
           </p>
-          <div className="d-flex justify-content-center gap-3">
+          <div className="d-flex justify-content-center gap-3 flex-wrap">
             <Link to="/books" className="btn btn-light btn-lg fw-semibold px-4">
               Browse Books
             </Link>
@@ -67,12 +56,11 @@ function HomePage() {
         </div>
       </section>
 
-      {/* ===== HOW IT WORKS SECTION ===== */}
+      {/* ===== HOW IT WORKS ===== */}
       <section className="py-5">
         <div className="container">
           <h2 className="section-title text-center">How It Works</h2>
           <div className="row g-4 text-center">
-            {/* Step 1 */}
             <div className="col-md-4">
               <div className="p-4">
                 <div className="step-icon mb-3">📋</div>
@@ -83,8 +71,6 @@ function HomePage() {
                 </p>
               </div>
             </div>
-
-            {/* Step 2 */}
             <div className="col-md-4">
               <div className="p-4">
                 <div className="step-icon mb-3">🔍</div>
@@ -95,8 +81,6 @@ function HomePage() {
                 </p>
               </div>
             </div>
-
-            {/* Step 3 */}
             <div className="col-md-4">
               <div className="p-4">
                 <div className="step-icon mb-3">🤝</div>
@@ -111,7 +95,7 @@ function HomePage() {
         </div>
       </section>
 
-      {/* ===== RECENT BOOKS SECTION ===== */}
+      {/* ===== RECENT BOOKS ===== */}
       <section className="py-5 bg-white">
         <div className="container">
           <div className="d-flex justify-content-between align-items-center mb-4">
@@ -120,11 +104,29 @@ function HomePage() {
               View All →
             </Link>
           </div>
-          <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-            {recentBooks.map((book) => (
-              <BookCard key={book._id} book={book} />
-            ))}
-          </div>
+
+          {loading && (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status" />
+              <p className="text-muted mt-2">Loading books...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="alert alert-warning text-center">{error}</div>
+          )}
+
+          {!loading && !error && recentBooks.length === 0 && (
+            <p className="text-center text-muted">No books listed yet.</p>
+          )}
+
+          {!loading && !error && recentBooks.length > 0 && (
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+              {recentBooks.map((book) => (
+                <BookCard key={book._id} book={book} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
     </div>
