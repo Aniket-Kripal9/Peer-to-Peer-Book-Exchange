@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import bookRoutes from "./routes/books.js";
+import requestRoutes from "./routes/requests.js";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.get("/", (req, res) => {
 
 // API Routes
 app.use("/api/books", bookRoutes);
+app.use("/api/requests", requestRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
