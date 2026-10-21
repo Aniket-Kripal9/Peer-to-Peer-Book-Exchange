@@ -7,15 +7,23 @@ import BookDetailPage from "./pages/BookDetailPage";
 import AddBookPage from "./pages/AddBookPage";
 import EditBookPage from "./pages/EditBookPage";
 import DashboardPage from "./pages/DashboardPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 
 function App() {
   return (
     <Router>
-      <div className="app-container">
+      <div className="d-flex flex-column min-vh-100">
         <Navbar />
-        <main className="main-content">
+        <main className="flex-grow-1">
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            {/* Login is the default page when visiting http://localhost:5173/ */}
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+
+            {/* Main Application Routes */}
+            <Route path="/home" element={<HomePage />} />
             <Route path="/books" element={<BooksPage />} />
             <Route path="/books/:id" element={<BookDetailPage />} />
             <Route path="/add-book" element={<AddBookPage />} />
