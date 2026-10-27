@@ -1,73 +1,61 @@
-import { useState } from "react";
-
-const categories = [
-  "All",
-  "Computer Science",
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "Engineering",
-  "Literature",
-  "Humanities",
-  "Business",
-  "Other",
-];
-
-function SearchBar({ onSearch }) {
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
+function SearchBar({
+  searchTerm = '',
+  onSearch,
+  onSearchChange,
+  placeholder = 'Search by title, author, or category...',
+}) {
+  const handleChange = (e) => {
+    const value = e.target.value;
+    if (typeof onSearchChange === 'function') {
+      onSearchChange(value);
+    } else if (typeof onSearch === 'function') {
+      onSearch(value);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSearch(query, category);
+    if (typeof onSearch === 'function') {
+      onSearch(searchTerm);
+    } else if (typeof onSearchChange === 'function') {
+      onSearchChange(searchTerm);
+    }
   };
 
-  const handleCategoryChange = (e) => {
-    const newCategory = e.target.value;
-    setCategory(newCategory);
-    // Auto-trigger search when category changes
-    onSearch(query, newCategory);
+  const handleClear = () => {
+    if (typeof onSearchChange === 'function') {
+      onSearchChange('');
+    }
+    if (typeof onSearch === 'function') {
+      onSearch('');
+    }
   };
 
   return (
-    <form className="search-bar-wrapper" onSubmit={handleSubmit}>
-      <div className="row g-3 align-items-center">
-        {/* Search Input */}
-        <div className="col-lg-7 col-md-6">
-          <div className="input-group">
-            <span className="input-group-text bg-white border-end-0">🔍</span>
-            <input
-              type="text"
-              className="form-control border-start-0 search-input"
-              placeholder="Search by book title or author..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Category Filter */}
-        <div className="col-lg-3 col-md-3">
-          <select
-            className="form-select category-select"
-            value={category}
-            onChange={handleCategoryChange}
+    <form onSubmit={handleSubmit} className="position-relative">
+      <div className="input-group">
+        <span className="input-group-text bg-white border-end-0 text-muted">
+          <i className="bi bi-search"></i>
+        </span>
+        <input
+          type="text"
+          className="form-control border-start-0 ps-0 shadow-none"
+          placeholder={placeholder}
+          value={searchTerm}
+          onChange={handleChange}
+        />
+        {searchTerm && (
+          <button
+            type="button"
+            className="btn btn-outline-secondary border-start-0 border-end-0 text-muted"
+            onClick={handleClear}
           >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Search Button */}
-        <div className="col-lg-2 col-md-3">
-          <button type="submit" className="btn btn-primary-custom w-100">
-            Search
+            <i className="bi bi-x-lg"></i>
           </button>
-        </div>
+        )}
+        <button type="submit" className="btn btn-primary fw-semibold px-4">
+          Search
+        </button>
       </div>
     </form>
   );
