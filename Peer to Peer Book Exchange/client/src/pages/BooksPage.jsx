@@ -1,115 +1,160 @@
-import { useEffect, useState } from "react";
-import BookCard from "../components/BookCard";
-import SearchBar from "../components/SearchBar";
-import { getBooks } from "../api";
+import { useState, useEffect } from 'react';
+import { getBooks } from '../api';
+import BookCard from '../components/BookCard';
+import SearchBar from '../components/SearchBar';
 
 function BooksPage() {
   const [books, setBooks] = useState([]);
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [error, setError] = useState('');
 
-  // Used by the SearchBar (event handler — synchronous setState is fine here)
-  const fetchBooks = async (query = "", category = "All") => {
-    try {
-      setLoading(true);
-      setError("");
-      const params = {};
-      if (query) params.search = query;
-      if (category && category !== "All") params.category = category;
+  const categories = [
+    'All',
+    'Computer Science',
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Engineering',
+    'Literature',
+    'Humanities',
+    'Business',
+    'Other',
+  ];
 
-      const { data } = await getBooks(params);
-      setBooks(data);
-    } catch (err) {
-      console.error(err);
-      setError("Could not load books. Is the backend running on port 5000?");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial load — every setState below happens AFTER the `await`
-  // (i.e., asynchronously), which satisfies the ESLint rule.
-  // `loading` already starts as `true`, so no sync setState needed.
   useEffect(() => {
     let cancelled = false;
 
-    const loadInitialBooks = async () => {
+    async function fetchBooks() {
+      setLoading(true);
       try {
-        const { data } = await getBooks();
-        if (!cancelled) setBooks(data);
-      } catch (err) {
-        console.error(err);
+        const categoryFilter = selectedCategory === 'All' ? '' : selectedCategory;
+        const data = await getBooks(search, categoryFilter);
+
         if (!cancelled) {
-          setError(
-            "Could not load books. Is the backend running on port 5000?",
-          );
+          // Defensive check to ensure data is an array
+          if (Array.isArray(data)) {
+            setBooks(data);
+          } else if (data && Array.isArray(data.books)) {
+            setBooks(data.books);
+          } else {
+            setBooks([]);
+          }
+          setError('');
+        }
+      } catch (err) {
+        console.error('Error fetching books:', err);
+        if (!cancelled) {
+          setError('Failed to load books. Please try again.');
+          setBooks([]);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
-    loadInitialBooks();
+    fetchBooks();
 
-    // Cleanup: prevents setState if the component unmounts mid-fetch
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [search, selectedCategory]);
 
-  const handleSearch = (query, category) => {
-    setSearchQuery(query);
-    setSelectedCategory(category);
-    fetchBooks(query, category);
-  };
+  // Safe reference to books array
+  const safeBooks = Array.isArray(books) ? books : [];
 
   return (
-    <div className="container py-4">
-      <h2 className="section-title">Browse Books</h2>
+    <div className="container py-5">
+      {/* Page Header */}
+      <div className="mb-4">
+        <h2 className="fw-bold mb-1" style={{ color: 'var(--primary-color)' }}>
+          Browse Available Books
+        </h2>
+        <p className="text-muted small">
+          Find textbooks, references, and literature shared by university peers.
+        </p>
+      </div>
 
-      <SearchBar onSearch={handleSearch} />
-
-      <p className="text-muted mt-4 mb-3">
-        Showing <strong>{books.length}</strong> book
-        {books.length !== 1 ? "s" : ""}
-        {selectedCategory !== "All" && (
-          <span>
-            {" "}
-            in <strong>{selectedCategory}</strong>
-          </span>
-        )}
-        {searchQuery && (
-          <span>
-            {" "}
-            matching &quot;<strong>{searchQuery}</strong>&quot;
-          </span>
-        )}
-      </p>
-
-      {loading && (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" role="status" />
-          <p className="text-muted mt-2">Loading books...</p>
+      {/* Search and Category Filter Controls */}
+      <div className="card shadow-sm border-0 mb-4">
+        <div className="card-body p-3 p-md-4">
+          <div className="row g-3 align-items-center">
+            <div className="col-md-7">
+              <SearchBar
+                searchTerm={search}
+                onSearchChange={setSearch}
+                placeholder="Search by title, author, or keyword..."
+              />
+            </div>
+            <div className="col-md-5">
+              <div className="d-flex align-items-center">
+                <label className="form-label mb-0 me-2 text-nowrap fw-semibold small">
+                  Category:
+                </label>
+                <select
+                  className="form-select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat === 'All' ? '' : cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
 
-      {error && <div className="alert alert-warning text-center">{error}</div>}
+      {/* Error Message */}
+      {error && <div className="alert alert-danger mb-4">{error}</div>}
 
-      {!loading && !error && books.length > 0 && (
+      {/* Results Summary */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <span className="text-muted small">
+          Showing <strong>{safeBooks.length}</strong> {safeBooks.length === 1 ? 'book' : 'books'}
+        </span>
+        {(search || selectedCategory) && (
+          <button
+            className="btn btn-sm btn-link text-decoration-none text-danger p-0"
+            onClick={() => {
+              setSearch('');
+              setSelectedCategory('');
+            }}
+          >
+            Clear Filters
+          </button>
+        )}
+      </div>
+
+      {/* Book Grid */}
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      ) : safeBooks.length > 0 ? (
         <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-          {books.map((book) => (
-            <BookCard key={book._id} book={book} />
+          {safeBooks.map((book) => (
+            <div className="col" key={book._id}>
+              <BookCard book={book} />
+            </div>
           ))}
         </div>
-      )}
-
-      {!loading && !error && books.length === 0 && (
-        <div className="text-center py-5">
-          <div className="empty-state-icon mb-3">📭</div>
-          <h5 className="fw-bold text-muted">No books found</h5>
-          <p className="text-muted">Try adjusting your search or filter.</p>
+      ) : (
+        <div className="text-center py-5 bg-white rounded-3 shadow-sm p-4">
+          <i className="bi bi-book-half fs-1 text-muted"></i>
+          <h5 className="fw-bold mt-2">No books found</h5>
+          <p className="text-muted small mb-0">
+            Try adjusting your search keywords or category filters.
+          </p>
         </div>
       )}
     </div>

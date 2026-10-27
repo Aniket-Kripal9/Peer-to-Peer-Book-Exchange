@@ -1,112 +1,94 @@
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 
-// Status badge color mapping
-const statusBadge = {
-  Pending: "bg-warning text-dark",
-  Accepted: "bg-success",
-  Rejected: "bg-danger",
-};
+function RequestCard({ request, isIncoming, onAccept, onReject, onDelete }) {
+  if (!request) return null;
 
-function RequestCard({ request, type, onAccept, onReject, onCancel }) {
-  const isIncoming = type === "incoming";
-  const isPending = request.status === "Pending";
+  // Safely extract book details (handles both populated book objects and unpopulated IDs)
+  const isBookObject = typeof request.book === 'object' && request.book !== null;
+  const bookTitle = isBookObject ? request.book?.title : 'Book Request';
+  const bookAuthor = isBookObject ? request.book?.author : '';
+  const bookId = isBookObject ? request.book?._id : request.book;
 
-  // Incoming → show who is requesting. Outgoing → show who owns the book.
-  const person = isIncoming ? request.requester : request.owner;
+  const requesterName = request.requesterName || 'Student';
+  const requesterDept = request.requesterDepartment || 'CSE';
+  const requesterSem = request.requesterSemester || '6th';
 
-  const formattedDate = new Date(request.requestedDate).toLocaleDateString(
-    "en-US",
-    { year: "numeric", month: "short", day: "numeric" },
-  );
+  const ownerName = request.ownerName || 'Student';
+  const status = request.status || 'Pending';
 
-  // Message shown once a request is no longer pending
-  const getStatusMessage = () => {
-    if (isPending) return null;
-
-    if (isIncoming) {
-      return request.status === "Accepted"
-        ? "You accepted this request. Meet up on campus to complete the exchange."
-        : "You rejected this request.";
-    }
-
-    return request.status === "Accepted"
-      ? "🎉 Your request was accepted! Meet up on campus to complete the exchange."
-      : "Unfortunately, the owner declined this request.";
-  };
-
-  const statusMessage = getStatusMessage();
+  const statusBadgeClass =
+    status === 'Accepted'
+      ? 'bg-success'
+      : status === 'Rejected'
+      ? 'bg-danger'
+      : 'bg-warning text-dark';
 
   return (
-    <div className={`request-card status-${request.status.toLowerCase()} mb-3`}>
-      <div className="d-flex flex-column flex-md-row justify-content-between gap-3">
-        {/* Left: Person avatar + book & request info */}
-        <div className="d-flex align-items-start">
-          <div className="owner-avatar avatar-sm me-3">
-            {person.name.charAt(0)}
-          </div>
-          <div>
-            <Link
-              to={`/books/${request.book._id}`}
-              className="fw-bold text-decoration-none"
-            >
-              {request.book.title}
-            </Link>
-            <div className="small text-muted">by {request.book.author}</div>
-
-            <div className="small mt-2">
-              {isIncoming ? "Requested by " : "Owner: "}
-              <strong>{person.name}</strong>
-              <span className="text-muted">
-                {" "}
-                • {person.department} • {person.semester} Semester
-              </span>
+    <div className="card shadow-sm border-0 h-100">
+      <div className="card-body p-4 d-flex flex-column justify-content-between">
+        <div>
+          <div className="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h6 className="fw-bold mb-1" style={{ color: 'var(--primary-color)' }}>
+                {bookId ? (
+                  <Link to={`/books/${bookId}`} className="text-decoration-none text-dark">
+                    {bookTitle}
+                  </Link>
+                ) : (
+                  bookTitle
+                )}
+              </h6>
+              {bookAuthor && <p className="text-muted small mb-0">by {bookAuthor}</p>}
             </div>
-            <div className="small text-muted">Requested on {formattedDate}</div>
-          </div>
-        </div>
-
-        {/* Right: Status badge + action buttons */}
-        <div className="text-md-end">
-          <div className="mb-2">
-            <span className={`badge ${statusBadge[request.status]}`}>
-              {request.status}
+            <span className={`badge ${statusBadgeClass} px-3 py-2 fw-semibold`}>
+              {status}
             </span>
           </div>
 
-          {/* Incoming + Pending → Accept / Reject */}
-          {isIncoming && isPending && (
-            <div className="d-flex gap-2 justify-content-md-end">
+          <div className="p-3 bg-light rounded-3 mb-3 small">
+            {isIncoming ? (
+              <div>
+                <span className="text-muted d-block">Requested by:</span>
+                <strong>{requesterName}</strong> ({requesterDept}, {requesterSem} Semester)
+              </div>
+            ) : (
+              <div>
+                <span className="text-muted d-block">Book Owner:</span>
+                <strong>{ownerName}</strong>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="d-flex gap-2 mt-2">
+          {isIncoming && status === 'Pending' && (
+            <>
               <button
-                className="btn btn-success btn-sm"
-                onClick={() => onAccept(request._id)}
+                onClick={onAccept}
+                className="btn btn-sm btn-success fw-semibold w-50"
               >
-                ✔ Accept
+                <i className="bi bi-check-lg me-1"></i> Accept
               </button>
               <button
-                className="btn btn-outline-danger btn-sm"
-                onClick={() => onReject(request._id)}
+                onClick={onReject}
+                className="btn btn-sm btn-outline-danger fw-semibold w-50"
               >
-                ✖ Reject
+                <i className="bi bi-x-lg me-1"></i> Reject
               </button>
-            </div>
+            </>
           )}
 
-          {/* Outgoing + Pending → Cancel */}
-          {!isIncoming && isPending && (
+          {!isIncoming && (
             <button
-              className="btn btn-outline-secondary btn-sm"
-              onClick={() => onCancel(request._id)}
+              onClick={onDelete}
+              className="btn btn-sm btn-outline-danger fw-semibold ms-auto"
             >
-              Cancel Request
+              <i className="bi bi-trash me-1"></i> Cancel Request
             </button>
           )}
         </div>
       </div>
-
-      {/* Bottom: status message (only after a decision) */}
-      {statusMessage && (
-        <div className="request-message small mt-3">{statusMessage}</div>
-      )}
     </div>
   );
 }

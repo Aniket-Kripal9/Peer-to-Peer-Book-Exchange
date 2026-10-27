@@ -1,101 +1,93 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import RequestCard from "../components/RequestCard";
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getBooks,
-  deleteBook,
-  updateBook,
   getRequests,
   updateRequestStatus,
+  deleteBook,
   deleteRequest,
-  CURRENT_USER,
-} from "../api";
-
-function EmptyState({ icon, title, text, children }) {
-  return (
-    <div className="dashboard-panel text-center py-5">
-      <div className="empty-state-icon mb-3">{icon}</div>
-      <h5 className="fw-bold text-muted">{title}</h5>
-      <p className="text-muted">{text}</p>
-      {children}
-    </div>
-  );
-}
-
-function mapOutgoing(req) {
-  return {
-    _id: req._id,
-    status: req.status,
-    requestedDate: req.createdAt,
-    book: {
-      _id: req.book?._id || req.book,
-      title: req.book?.title || "Unknown book",
-      author: req.book?.author || "",
-    },
-    owner: {
-      name: req.ownerName,
-      department: "",
-      semester: "",
-    },
-  };
-}
-
-function mapIncoming(req) {
-  return {
-    _id: req._id,
-    status: req.status,
-    requestedDate: req.createdAt,
-    book: {
-      _id: req.book?._id || req.book,
-      title: req.book?.title || "Unknown book",
-      author: req.book?.author || "",
-    },
-    requester: {
-      name: req.requesterName,
-      department: req.requesterDepartment || "",
-      semester: req.requesterSemester || "",
-    },
-  };
-}
+  getCurrentUser,
+} from '../api';
+import BookCard from '../components/BookCard';
+import RequestCard from '../components/RequestCard';
 
 function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("listings");
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [myListings, setMyListings] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState('listings');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  // Initial load — state updates happen asynchronously AFTER await
   useEffect(() => {
     let cancelled = false;
 
-    const loadDashboardData = async () => {
+    async function loadDashboardData() {
       try {
-        setError("");
-        const [booksRes, outgoingRes, incomingRes] = await Promise.all([
+        const user = getCurrentUser();
+        if (!cancelled) {
+          setCurrentUser(user);
+        }
+
+        const [booksRes, requestsRes] = await Promise.all([
           getBooks(),
-          getRequests({ requesterName: CURRENT_USER.name }),
-          getRequests({ ownerName: CURRENT_USER.name }),
+          getRequests(),
         ]);
 
-        if (!cancelled) {
-          const mine = booksRes.data.filter(
-            (b) => b.ownerName === CURRENT_USER.name,
-          );
-          setMyListings(mine);
-          setMyRequests(outgoingRes.data.map(mapOutgoing));
-          setIncomingRequests(incomingRes.data.map(mapIncoming));
-        }
+        if (cancelled) return;
+
+        // Defensive normalization to arrays
+        const allBooks = Array.isArray(booksRes)
+          ? booksRes
+          : booksRes?.books && Array.isArray(booksRes.books)
+          ? booksRes.books
+          : [];
+
+        const allRequests = Array.isArray(requestsRes)
+          ? requestsRes
+          : requestsRes?.requests && Array.isArray(requestsRes.requests)
+          ? requestsRes.requests
+          : [];
+
+        const userName = user?.name || '';
+
+        // Filter for My Listings (books owned by logged-in user)
+        const listings = allBooks.filter(
+          (book) =>
+            book.ownerName &&
+            book.ownerName.toLowerCase() === userName.toLowerCase()
+        );
+
+        // Filter for My Requests (requests sent by logged-in user)
+        const myReqs = allRequests.filter(
+          (req) =>
+            req.requesterName &&
+            req.requesterName.toLowerCase() === userName.toLowerCase()
+        );
+
+        // Filter for Incoming Requests (requests received for user's books)
+        const incomingReqs = allRequests.filter(
+          (req) =>
+            req.ownerName &&
+            req.ownerName.toLowerCase() === userName.toLowerCase()
+        );
+
+        setMyListings(listings);
+        setMyRequests(myReqs);
+        setIncomingRequests(incomingReqs);
+        setError('');
       } catch (err) {
-        console.error(err);
+        console.error('Error loading dashboard:', err);
         if (!cancelled) {
-          setError("Could not load dashboard. Is the backend running?");
+          setError('Failed to load dashboard data. Please try again.');
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
     loadDashboardData();
 
@@ -104,278 +96,205 @@ function DashboardPage() {
     };
   }, []);
 
-  // Helper function to re-fetch data after actions (delete, accept, reject)
-  const refreshData = async () => {
+  const handleAccept = async (requestId) => {
     try {
-      setError("");
-      const [booksRes, outgoingRes, incomingRes] = await Promise.all([
-        getBooks(),
-        getRequests({ requesterName: CURRENT_USER.name }),
-        getRequests({ ownerName: CURRENT_USER.name }),
-      ]);
-
-      const mine = booksRes.data.filter(
-        (b) => b.ownerName === CURRENT_USER.name,
-      );
-      setMyListings(mine);
-      setMyRequests(outgoingRes.data.map(mapOutgoing));
-      setIncomingRequests(incomingRes.data.map(mapIncoming));
+      await updateRequestStatus(requestId, 'Accepted');
+      window.location.reload();
     } catch (err) {
-      console.error(err);
-      setError("Failed to refresh dashboard.");
+      alert('Failed to accept request: ' + (err.response?.data?.message || err.message));
     }
   };
 
-  const pendingIncomingCount = incomingRequests.filter(
-    (r) => r.status === "Pending",
-  ).length;
-
-  const handleToggleAvailability = async (id, current) => {
+  const handleReject = async (requestId) => {
     try {
-      await updateBook(id, { available: !current });
-      await refreshData();
+      await updateRequestStatus(requestId, 'Rejected');
+      window.location.reload();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to update availability");
+      alert('Failed to reject request: ' + (err.response?.data?.message || err.message));
     }
   };
 
-  const handleDeleteListing = async (id) => {
-    if (!window.confirm("Delete this listing permanently?")) return;
+  const handleDeleteListing = async (bookId) => {
+    if (!window.confirm('Are you sure you want to delete this listing?')) return;
     try {
-      await deleteBook(id);
-      await refreshData();
+      await deleteBook(bookId);
+      setMyListings((prev) => prev.filter((b) => b._id !== bookId));
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to delete listing");
+      alert('Failed to delete book: ' + (err.response?.data?.message || err.message));
     }
   };
 
-  const handleCancelRequest = async (id) => {
-    if (!window.confirm("Cancel this exchange request?")) return;
+  const handleDeleteMyRequest = async (requestId) => {
+    if (!window.confirm('Are you sure you want to cancel this request?')) return;
     try {
-      await deleteRequest(id);
-      await refreshData();
+      await deleteRequest(requestId);
+      setMyRequests((prev) => prev.filter((r) => r._id !== requestId));
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to cancel request");
+      alert('Failed to delete request: ' + (err.response?.data?.message || err.message));
     }
   };
 
-  const handleIncomingDecision = async (requestId, newStatus) => {
-    try {
-      await updateRequestStatus(requestId, newStatus);
-      await refreshData();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to update request");
-    }
-  };
+  if (loading) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="container py-4">
-      <h2 className="section-title mb-1">My Dashboard</h2>
-      <p className="text-muted mb-4">
-        Logged in as <strong>{CURRENT_USER.name}</strong> (mock user until auth
-        is added).
-      </p>
-
-      {error && <div className="alert alert-warning">{error}</div>}
-
-      {loading ? (
-        <div className="text-center py-5">
-          <div className="spinner-border text-primary" role="status" />
-          <p className="text-muted mt-2">Loading dashboard...</p>
+    <div className="container py-5">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 className="fw-bold mb-1" style={{ color: 'var(--primary-color)' }}>
+            My Dashboard
+          </h2>
+          <p className="text-muted small mb-0">
+            Logged in as <strong>{currentUser?.name || 'Student'}</strong> (
+            {currentUser?.department || 'CSE'}, {currentUser?.semester || '6th'} Semester)
+          </p>
         </div>
-      ) : (
-        <>
-          {/* Tabs */}
-          <ul className="nav nav-tabs dashboard-tabs mb-4">
-            <li className="nav-item">
-              <button
-                type="button"
-                className={`nav-link ${activeTab === "listings" ? "active" : ""}`}
-                onClick={() => setActiveTab("listings")}
-              >
-                📚 My Listings
-                <span className="badge rounded-pill bg-secondary ms-2">
-                  {myListings.length}
-                </span>
-              </button>
-            </li>
-            <li className="nav-item">
-              <button
-                type="button"
-                className={`nav-link ${
-                  activeTab === "myRequests" ? "active" : ""
-                }`}
-                onClick={() => setActiveTab("myRequests")}
-              >
-                📤 My Requests
-                <span className="badge rounded-pill bg-secondary ms-2">
-                  {myRequests.length}
-                </span>
-              </button>
-            </li>
-            <li className="nav-item">
-              <button
-                type="button"
-                className={`nav-link ${activeTab === "incoming" ? "active" : ""}`}
-                onClick={() => setActiveTab("incoming")}
-              >
-                📥 Incoming Requests
-                <span
-                  className={`badge rounded-pill ms-2 ${
-                    pendingIncomingCount > 0 ? "bg-danger" : "bg-secondary"
-                  }`}
-                >
-                  {pendingIncomingCount > 0
-                    ? `${pendingIncomingCount} new`
-                    : incomingRequests.length}
-                </span>
-              </button>
-            </li>
-          </ul>
+        <Link to="/add-book" className="btn btn-primary fw-semibold">
+          <i className="bi bi-plus-lg me-1"></i> Add New Book
+        </Link>
+      </div>
 
-          {/* My Listings */}
-          {activeTab === "listings" && (
-            <div>
-              {myListings.length > 0 ? (
-                <div className="dashboard-panel">
-                  <div className="table-responsive">
-                    <table className="table table-hover align-middle mb-0">
-                      <thead className="table-light">
-                        <tr>
-                          <th>Book</th>
-                          <th>Category</th>
-                          <th>Condition</th>
-                          <th>Status</th>
-                          <th className="text-end">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {myListings.map((book) => (
-                          <tr key={book._id}>
-                            <td>
-                              <Link
-                                to={`/books/${book._id}`}
-                                className="fw-semibold text-decoration-none"
-                              >
-                                {book.title}
-                              </Link>
-                              <div className="small text-muted">
-                                by {book.author}
-                              </div>
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-dark border">
-                                {book.category}
-                              </span>
-                            </td>
-                            <td>{book.condition}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  book.available ? "bg-success" : "bg-secondary"
-                                }`}
-                              >
-                                {book.available ? "Available" : "Exchanged"}
-                              </span>
-                            </td>
-                            <td className="text-end">
-                              <div className="d-flex gap-2 justify-content-end flex-wrap">
-                                <Link
-                                  to={`/edit-book/${book._id}`}
-                                  className="btn btn-sm btn-outline-secondary"
-                                >
-                                  ✏️ Edit
-                                </Link>
-                                <button
-                                  className="btn btn-sm btn-outline-primary"
-                                  onClick={() =>
-                                    handleToggleAvailability(
-                                      book._id,
-                                      book.available,
-                                    )
-                                  }
-                                >
-                                  {book.available
-                                    ? "Mark Exchanged"
-                                    : "Mark Available"}
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => handleDeleteListing(book._id)}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+      {error && <div className="alert alert-danger mb-4">{error}</div>}
+
+      {/* Navigation Tabs */}
+      <ul className="nav nav-tabs mb-4 border-bottom">
+        <li className="nav-item">
+          <button
+            className={`nav-link ${activeTab === 'listings' ? 'active fw-bold' : 'text-secondary'}`}
+            onClick={() => setActiveTab('listings')}
+          >
+            <i className="bi bi-journal-text me-2"></i>
+            My Listings{' '}
+            <span className="badge bg-primary rounded-pill ms-1">{myListings.length}</span>
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link ${activeTab === 'myRequests' ? 'active fw-bold' : 'text-secondary'}`}
+            onClick={() => setActiveTab('myRequests')}
+          >
+            <i className="bi bi-send me-2"></i>
+            My Requests{' '}
+            <span className="badge bg-secondary rounded-pill ms-1">{myRequests.length}</span>
+          </button>
+        </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link ${activeTab === 'incomingRequests' ? 'active fw-bold' : 'text-secondary'}`}
+            onClick={() => setActiveTab('incomingRequests')}
+          >
+            <i className="bi bi-inbox me-2"></i>
+            Incoming Requests{' '}
+            <span className="badge bg-warning text-dark rounded-pill ms-1">
+              {incomingRequests.length}
+            </span>
+          </button>
+        </li>
+      </ul>
+
+      {/* Tab Content */}
+      {activeTab === 'listings' && (
+        <div>
+          {myListings.length > 0 ? (
+            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+              {myListings.map((book) => (
+                <div className="col" key={book._id}>
+                  <div className="position-relative">
+                    <BookCard book={book} />
+                    <div className="mt-2 d-flex gap-2">
+                      <Link
+                        to={`/edit-book/${book._id}`}
+                        className="btn btn-sm btn-outline-secondary w-50"
+                      >
+                        <i className="bi bi-pencil me-1"></i> Edit
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteListing(book._id)}
+                        className="btn btn-sm btn-outline-danger w-50"
+                      >
+                        <i className="bi bi-trash me-1"></i> Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <EmptyState
-                  icon="📭"
-                  title="You haven't listed any books yet"
-                  text="Add a book with your name as owner to see it here."
-                >
-                  <Link to="/add-book" className="btn btn-primary-custom">
-                    ➕ Add a Book
-                  </Link>
-                </EmptyState>
-              )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-5 bg-white rounded-3 shadow-sm p-4">
+              <i className="bi bi-journal-x fs-1 text-muted"></i>
+              <h5 className="fw-bold mt-2">You haven't listed any books yet</h5>
+              <p className="text-muted small mb-3">
+                Add a book with your name as owner to see it here.
+              </p>
+              <Link to="/add-book" className="btn btn-primary btn-sm px-4">
+                Add a Book
+              </Link>
             </div>
           )}
+        </div>
+      )}
 
-          {/* My Requests */}
-          {activeTab === "myRequests" && (
-            <div>
-              {myRequests.length > 0 ? (
-                myRequests.map((req) => (
+      {activeTab === 'myRequests' && (
+        <div>
+          {myRequests.length > 0 ? (
+            <div className="row row-cols-1 row-cols-md-2 g-3">
+              {myRequests.map((req) => (
+                <div className="col" key={req._id}>
                   <RequestCard
-                    key={req._id}
                     request={req}
-                    type="outgoing"
-                    onCancel={handleCancelRequest}
+                    isIncoming={false}
+                    onDelete={() => handleDeleteMyRequest(req._id)}
                   />
-                ))
-              ) : (
-                <EmptyState
-                  icon="📤"
-                  title="No requests sent"
-                  text="Browse books and request the ones you need."
-                >
-                  <Link to="/books" className="btn btn-primary-custom">
-                    📚 Browse Books
-                  </Link>
-                </EmptyState>
-              )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-5 bg-white rounded-3 shadow-sm p-4">
+              <i className="bi bi-send-x fs-1 text-muted"></i>
+              <h5 className="fw-bold mt-2">No outgoing exchange requests</h5>
+              <p className="text-muted small mb-3">
+                Browse available books and send requests to fellow students.
+              </p>
+              <Link to="/books" className="btn btn-primary btn-sm px-4">
+                Browse Books
+              </Link>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Incoming */}
-          {activeTab === "incoming" && (
-            <div>
-              {incomingRequests.length > 0 ? (
-                incomingRequests.map((req) => (
+      {activeTab === 'incomingRequests' && (
+        <div>
+          {incomingRequests.length > 0 ? (
+            <div className="row row-cols-1 row-cols-md-2 g-3">
+              {incomingRequests.map((req) => (
+                <div className="col" key={req._id}>
                   <RequestCard
-                    key={req._id}
                     request={req}
-                    type="incoming"
-                    onAccept={(id) => handleIncomingDecision(id, "Accepted")}
-                    onReject={(id) => handleIncomingDecision(id, "Rejected")}
+                    isIncoming={true}
+                    onAccept={() => handleAccept(req._id)}
+                    onReject={() => handleReject(req._id)}
                   />
-                ))
-              ) : (
-                <EmptyState
-                  icon="📥"
-                  title="No incoming requests"
-                  text="When someone requests your book, it will show up here."
-                />
-              )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-5 bg-white rounded-3 shadow-sm p-4">
+              <i className="bi bi-inbox-fill fs-1 text-muted"></i>
+              <h5 className="fw-bold mt-2">No incoming requests yet</h5>
+              <p className="text-muted small mb-0">
+                When another student requests one of your listed books, it will appear here.
+              </p>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

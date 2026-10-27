@@ -1,17 +1,19 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { registerUserApi } from '../api';
 
 function SignupPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    department: "CSE",
-    semester: "6th",
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    department: 'CSE',
+    semester: '6th',
   });
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({
@@ -20,15 +22,34 @@ function SignupPage() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError('Passwords do not match');
       return;
     }
-    setError("");
-    // Redirect newly signed up user to Home
-    navigate("/home");
+
+    setError('');
+    setLoading(true);
+
+    try {
+      const user = await registerUserApi({
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        department: formData.department,
+        semester: formData.semester,
+      });
+
+      localStorage.setItem('user', JSON.stringify(user));
+      window.dispatchEvent(new Event('authChange'));
+      navigate('/home');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed. Try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -39,18 +60,13 @@ function SignupPage() {
             <div className="card-body p-4 p-md-5">
               <div className="text-center mb-4">
                 <i className="bi bi-person-plus-fill fs-1 text-primary"></i>
-                <h3
-                  className="fw-bold mt-2"
-                  style={{ color: "var(--primary-color)" }}
-                >
+                <h3 className="fw-bold mt-2" style={{ color: 'var(--primary-color)' }}>
                   Create an Account
                 </h3>
-                <p className="text-muted small">
-                  Join the BookSwap university community
-                </p>
+                <p className="text-muted small">Join the BookSwap university community</p>
               </div>
 
-              {error && <div className="alert alert-danger py-2">{error}</div>}
+              {error && <div className="alert alert-danger py-2 fs-6">{error}</div>}
 
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
@@ -59,7 +75,7 @@ function SignupPage() {
                     type="text"
                     name="fullName"
                     className="form-control"
-                    placeholder="Full Name"
+                    placeholder="Aniket Kripal"
                     value={formData.fullName}
                     onChange={handleChange}
                     required
@@ -67,14 +83,12 @@ function SignupPage() {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">
-                    University Email
-                  </label>
+                  <label className="form-label fw-semibold">University Email</label>
                   <input
                     type="email"
                     name="email"
                     className="form-control"
-                    placeholder="student@university.edu"
+                    placeholder="aniket@university.edu"
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -135,9 +149,7 @@ function SignupPage() {
                   </div>
 
                   <div className="col-md-6 mb-4">
-                    <label className="form-label fw-semibold">
-                      Confirm Password
-                    </label>
+                    <label className="form-label fw-semibold">Confirm Password</label>
                     <input
                       type="password"
                       name="confirmPassword"
@@ -152,9 +164,10 @@ function SignupPage() {
 
                 <button
                   type="submit"
+                  disabled={loading}
                   className="btn btn-primary w-100 py-2 fw-semibold mb-3"
                 >
-                  Sign Up
+                  {loading ? 'Creating Account...' : 'Sign Up'}
                 </button>
               </form>
 

@@ -1,193 +1,255 @@
-import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { getBookById, createRequest, CURRENT_USER } from "../api";
-
-const conditionColors = {
-  New: "bg-success",
-  "Like New": "bg-info",
-  Good: "bg-primary",
-  Fair: "bg-warning text-dark",
-  Poor: "bg-danger",
-};
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getBookById, createRequest, deleteBook, getCurrentUser } from '../api';
 
 function BookDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [book, setBook] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [requesting, setRequesting] = useState(false);
-  const [requestMsg, setRequestMsg] = useState("");
+  const [requestSending, setRequestSending] = useState(false);
+  const [requestSuccess, setRequestSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
-    const fetchBook = async () => {
+    async function fetchBook() {
+      setLoading(true);
       try {
-        const { data } = await getBookById(id);
-        if (!cancelled) setBook(data);
-      } catch (err) {
-        console.error(err);
-        if (!cancelled) setError("Book not found or server error.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
+        const user = getCurrentUser();
+        if (!cancelled) setCurrentUser(user);
 
-    fetchBook();
+        const data = await getBookById(id);
+
+        if (!cancelled) {
+          // Normalize response: handle both direct book object and nested { book: {...} }
+          if (data && (data._id || data.title)) {
+            setBook(data);
+          } else if (data && data.book) {
+            setBook(data.book);
+          } else {
+            setBook(null);
+          }
+          setError('');
+        }
+      } catch (err) {
+        console.error('Error loading book details:', err);
+        if (!cancelled) {
+          setError(err.response?.data?.message || 'Failed to load book details.');
+          setBook(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (id) {
+      fetchBook();
+    }
 
     return () => {
       cancelled = true;
     };
   }, [id]);
 
-  const handleRequest = async () => {
+  const handleRequestExchange = async () => {
     if (!book) return;
-
-    if (book.ownerName === CURRENT_USER.name) {
-      setRequestMsg("⚠️ You cannot request your own book.");
-      return;
-    }
+    setRequestSending(true);
+    setError('');
 
     try {
-      setRequesting(true);
-      setRequestMsg("");
-      await createRequest({
-        book: book._id,
-        requesterName: CURRENT_USER.name,
-        requesterDepartment: CURRENT_USER.department,
-        requesterSemester: CURRENT_USER.semester,
-        ownerName: book.ownerName,
-      });
-      setRequestMsg("✅ Exchange request sent successfully!");
+      await createRequest(book._id, book.ownerName);
+      setRequestSuccess(true);
     } catch (err) {
-      const msg =
-        err.response?.data?.message || "Failed to send request. Try again.";
-      setRequestMsg(`❌ ${msg}`);
+      console.error('Error creating request:', err);
+      setError(err.response?.data?.message || 'Failed to send exchange request.');
     } finally {
-      setRequesting(false);
+      setRequestSending(false);
+    }
+  };
+
+  const handleDeleteBook = async () => {
+    if (!window.confirm('Are you sure you want to delete this book listing?')) return;
+
+    try {
+      await deleteBook(book._id);
+      navigate('/dashboard');
+    } catch (err) {
+      alert('Failed to delete book: ' + (err.response?.data?.message || err.message));
     }
   };
 
   if (loading) {
     return (
-      <div className="container text-center py-5">
-        <div className="spinner-border text-primary" role="status" />
-        <p className="mt-3 text-muted">Loading book details...</p>
+      <div className="container py-5 text-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading book details...</span>
+        </div>
       </div>
     );
   }
 
-  if (error || !book) {
+  if (!book) {
     return (
-      <div className="container text-center py-5">
-        <div className="empty-state-icon mb-3">😕</div>
-        <h4 className="fw-bold text-muted">Book Not Found</h4>
-        <p className="text-muted">{error || "This book does not exist."}</p>
-        <Link to="/books" className="btn btn-primary-custom mt-2">
-          ← Back to Browse
-        </Link>
+      <div className="container py-5 text-center">
+        <div className="py-5 bg-white rounded-3 shadow-sm p-4 col-md-6 mx-auto">
+          <i className="bi bi-exclamation-triangle fs-1 text-warning"></i>
+          <h3 className="fw-bold mt-3" style={{ color: 'var(--primary-color)' }}>
+            Book Not Found
+          </h3>
+          <p className="text-muted small mb-4">
+            {error || 'This book listing does not exist or has been removed.'}
+          </p>
+          <Link to="/books" className="btn btn-primary fw-semibold px-4">
+            &larr; Back to Browse Books
+          </Link>
+        </div>
       </div>
     );
   }
+
+  const isOwner =
+    currentUser?.name &&
+    book?.ownerName &&
+    currentUser.name.toLowerCase() === book.ownerName.toLowerCase();
 
   return (
-    <div className="container py-4">
-      <button
-        className="btn btn-link text-decoration-none p-0 mb-3 back-link"
-        onClick={() => navigate(-1)}
-      >
-        ← Back
-      </button>
+    <div className="container py-5">
+      {/* Breadcrumb Navigation */}
+      <nav aria-label="breadcrumb" className="mb-4">
+        <ol className="breadcrumb">
+          <li className="breadcrumb-item">
+            <Link to="/home">Home</Link>
+          </li>
+          <li className="breadcrumb-item">
+            <Link to="/books">Books</Link>
+          </li>
+          <li className="breadcrumb-item active" aria-current="page">
+            {book.title}
+          </li>
+        </ol>
+      </nav>
 
-      <div className="card card-custom p-0 overflow-hidden">
+      <div className="card shadow-sm border-0 overflow-hidden">
         <div className="row g-0">
-          <div className="col-md-4">
-            <div className="detail-image-wrapper">
-              <img
-                src={book.image || "https://picsum.photos/seed/nobook/400/550"}
-                className="img-fluid h-100 w-100"
-                alt={book.title}
-                style={{ objectFit: "cover" }}
-              />
-              <span
-                className={`badge position-absolute top-0 start-0 m-3 fs-6 ${
-                  book.available ? "bg-success" : "bg-secondary"
-                }`}
-              >
-                {book.available ? "✅ Available" : "❌ Exchanged"}
-              </span>
-            </div>
+          {/* Book Image */}
+          <div className="col-md-5 bg-light d-flex align-items-center justify-content-center p-4">
+            <img
+              src={
+                book.image ||
+                `https://picsum.photos/seed/${book._id || 'book'}/400/550`
+              }
+              alt={book.title}
+              className="img-fluid rounded shadow-sm"
+              style={{ maxHeight: '420px', objectFit: 'cover' }}
+              onError={(e) => {
+                e.target.src = 'https://picsum.photos/seed/fallback/400/550';
+              }}
+            />
           </div>
 
-          <div className="col-md-8">
-            <div className="card-body p-4">
-              <h2 className="fw-bold mb-1">{book.title}</h2>
-              <p className="text-muted fs-5 mb-3">by {book.author}</p>
-
-              <div className="mb-4 d-flex flex-wrap gap-2">
-                <span className="badge bg-light text-dark border fs-6 px-3 py-2">
-                  📂 {book.category}
+          {/* Book Details */}
+          <div className="col-md-7 p-4 p-md-5 d-flex flex-column justify-content-between">
+            <div>
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <span className="badge bg-secondary px-3 py-2 fw-normal">
+                  {book.category || 'General'}
                 </span>
                 <span
-                  className={`badge ${
-                    conditionColors[book.condition] || "bg-secondary"
-                  } fs-6 px-3 py-2`}
+                  className={`badge px-3 py-2 ${
+                    book.available ? 'bg-success' : 'bg-danger'
+                  }`}
                 >
-                  📦 {book.condition}
+                  {book.available ? 'Available for Swap' : 'Exchanged'}
                 </span>
-                {book.edition && (
-                  <span className="badge bg-light text-dark border fs-6 px-3 py-2">
-                    📘 {book.edition}
-                  </span>
-                )}
               </div>
 
-              <h6 className="fw-bold mb-2">Description</h6>
-              <p className="text-muted mb-4">{book.description}</p>
+              <h2 className="fw-bold mb-2" style={{ color: 'var(--primary-color)' }}>
+                {book.title}
+              </h2>
+              <p className="fs-5 text-muted mb-3">by {book.author}</p>
 
               <hr />
 
-              <h6 className="fw-bold mb-2">Listed By</h6>
-              <div className="d-flex align-items-center mb-3">
-                <div className="owner-avatar me-3">
-                  {(book.ownerName || "?").charAt(0)}
+              {/* Attributes Grid */}
+              <div className="row g-3 my-2">
+                <div className="col-6 col-sm-4">
+                  <span className="text-muted small d-block">Edition</span>
+                  <strong className="text-dark">{book.edition || 'N/A'}</strong>
                 </div>
-                <div>
-                  <p className="mb-0 fw-semibold">{book.ownerName}</p>
-                  <small className="text-muted">
-                    {book.ownerDepartment}
-                    {book.ownerSemester
-                      ? ` • ${book.ownerSemester} Semester`
-                      : ""}
-                  </small>
+                <div className="col-6 col-sm-4">
+                  <span className="text-muted small d-block">Condition</span>
+                  <strong className="text-dark">{book.condition || 'Good'}</strong>
+                </div>
+                <div className="col-6 col-sm-4">
+                  <span className="text-muted small d-block">Listed By</span>
+                  <strong className="text-dark">
+                    {book.ownerName || 'Student'} ({book.ownerDepartment || 'CSE'}, {book.ownerSemester || '6th'})
+                  </strong>
                 </div>
               </div>
 
-              <small className="text-muted d-block mb-4">
-                Listed on{" "}
-                {new Date(book.createdAt).toLocaleDateString("en-IN", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </small>
+              <hr />
 
-              {requestMsg && (
-                <div className="alert alert-info py-2">{requestMsg}</div>
-              )}
+              <div className="mb-4">
+                <h6 className="fw-bold mb-2">Description</h6>
+                <p className="text-muted leading-relaxed">
+                  {book.description || 'No description provided for this book.'}
+                </p>
+              </div>
+            </div>
 
-              {book.available ? (
+            {/* Error / Success Alerts */}
+            {error && <div className="alert alert-danger py-2 fs-6 mb-3">{error}</div>}
+
+            {requestSuccess && (
+              <div className="alert alert-success py-2 fs-6 mb-3">
+                <i className="bi bi-check-circle-fill me-2"></i>
+                Exchange request sent successfully! Track it in your{' '}
+                <Link to="/dashboard" className="fw-bold">
+                  Dashboard
+                </Link>
+                .
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="pt-2">
+              {isOwner ? (
+                <div className="d-flex gap-2">
+                  <Link
+                    to={`/edit-book/${book._id}`}
+                    className="btn btn-outline-primary fw-semibold px-4"
+                  >
+                    <i className="bi bi-pencil me-1"></i> Edit Listing
+                  </Link>
+                  <button
+                    onClick={handleDeleteBook}
+                    className="btn btn-outline-danger fw-semibold px-4"
+                  >
+                    <i className="bi bi-trash me-1"></i> Delete
+                  </button>
+                </div>
+              ) : book.available ? (
                 <button
-                  className="btn btn-primary-custom btn-lg w-100"
-                  onClick={handleRequest}
-                  disabled={requesting}
+                  onClick={handleRequestExchange}
+                  disabled={requestSending || requestSuccess}
+                  className="btn btn-primary btn-lg fw-semibold px-4 w-100 w-sm-auto"
                 >
-                  {requesting ? "Sending..." : "🤝 Request Exchange"}
+                  {requestSending
+                    ? 'Sending Request...'
+                    : requestSuccess
+                    ? 'Request Sent'
+                    : 'Request Book Exchange'}
                 </button>
               ) : (
-                <button className="btn btn-secondary btn-lg w-100" disabled>
-                  Already Exchanged
+                <button className="btn btn-secondary btn-lg fw-semibold px-4 disabled" disabled>
+                  Currently Unavailable
                 </button>
               )}
             </div>
