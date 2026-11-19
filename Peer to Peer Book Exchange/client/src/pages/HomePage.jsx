@@ -55,7 +55,7 @@ function HomePage() {
                 Exchange Books with Fellow Students Easily
               </h1>
               <p className="lead text-white-50 mb-4">
-                Save money, clear your shelf, and help classmate peer-to-peer! Share engineering, literature, science, and course textbooks within your campus.
+                Save money, clear your shelf, and help classmates by sharing books. Share engineering, literature, science, and course textbooks within your campus.
               </p>
               <div className="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
                 <Link to="/books" className="btn btn-warning btn-lg fw-semibold px-4">
