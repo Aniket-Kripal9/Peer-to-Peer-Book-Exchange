@@ -31,13 +31,13 @@ function Navbar() {
   const displayName = user?.name ? user.name.split(' ')[0] : '';
 
   return (
-    <nav className="navbar navbar-expand-lg sticky-top shadow-sm navbar-custom">
+    <nav className="navbar navbar-expand-lg sticky-top shadow-sm navbar-custom bg-white">
       <div className="container">
         <Link
           className="navbar-brand fw-bold fs-4 d-flex align-items-center"
           to={user ? '/home' : '/'}
         >
-          <i className="bi bi-journal-bookmark-fill me-2 text-warning"></i>
+          <i className="bi bi-journal-bookmark-fill me-2 text-primary"></i>
           BookSwap
         </Link>
 
@@ -79,18 +79,22 @@ function Navbar() {
                   </NavLink>
                 </li>
 
+                {/* User Greeting */}
                 <li className="nav-item ms-lg-2">
-                  <span className="navbar-text fw-semibold text-warning px-2">
+                  <span className="navbar-text fw-semibold text-primary px-2">
+                    <i className="bi bi-person-circle me-1"></i>
                     Hi, {displayName}
                   </span>
                 </li>
 
+                {/* Clearly Visible Sign Out Button */}
                 <li className="nav-item">
                   <button
                     type="button"
                     onClick={handleSignOut}
-                    className="btn btn-outline-light btn-sm px-3 ms-2"
+                    className="btn btn-outline-danger btn-sm px-3 ms-2 fw-semibold"
                   >
+                    <i className="bi bi-box-arrow-right me-1"></i>
                     Sign Out
                   </button>
                 </li>
@@ -99,12 +103,12 @@ function Navbar() {
               /* If visitor is logged out OR on login/signup page */
               <>
                 <li className="nav-item">
-                  <Link to="/login" className="btn btn-outline-light btn-sm px-3 ms-2 me-1">
+                  <Link to="/login" className="btn btn-outline-primary btn-sm px-3 ms-2 me-1 fw-semibold">
                     Login
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <Link to="/signup" className="btn btn-warning btn-sm px-3 fw-semibold">
+                  <Link to="/signup" className="btn btn-primary btn-sm px-3 fw-semibold">
                     Sign Up
                   </Link>
                 </li>
