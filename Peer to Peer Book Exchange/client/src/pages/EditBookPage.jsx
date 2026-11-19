@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getBookById, updateBook } from '../api';
+import { getBookById, updateBook, getCurrentUser } from '../api';
 
 function EditBookPage() {
   const { id } = useParams();
@@ -10,6 +10,14 @@ function EditBookPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
+
+  // Protect route: Redirect to /login if visitor is not signed in
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -46,7 +54,6 @@ function EditBookPage() {
         const data = await getBookById(id);
 
         if (!cancelled) {
-          // Normalize response: handle both direct object and nested { book: {...} }
           const bookData =
             data && (data._id || data.title)
               ? data

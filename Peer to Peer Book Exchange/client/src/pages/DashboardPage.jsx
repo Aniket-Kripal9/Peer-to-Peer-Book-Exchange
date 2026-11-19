@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   getBooks,
   getRequests,
@@ -12,6 +12,7 @@ import BookCard from '../components/BookCard';
 import RequestCard from '../components/RequestCard';
 
 function DashboardPage() {
+  const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
   const [myListings, setMyListings] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
@@ -20,12 +21,22 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Protect route: Redirect to /login if visitor is not signed in
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      navigate('/login');
+    }
+  }, [navigate]);
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadDashboardData() {
+      const user = getCurrentUser();
+      if (!user) return;
+
       try {
-        const user = getCurrentUser();
         if (!cancelled) {
           setCurrentUser(user);
         }
@@ -52,21 +63,21 @@ function DashboardPage() {
 
         const userName = user?.name || '';
 
-        // Filter for My Listings (books owned by logged-in user)
+        // Filter for My Listings
         const listings = allBooks.filter(
           (book) =>
             book.ownerName &&
             book.ownerName.toLowerCase() === userName.toLowerCase()
         );
 
-        // Filter for My Requests (requests sent by logged-in user)
+        // Filter for My Requests
         const myReqs = allRequests.filter(
           (req) =>
             req.requesterName &&
             req.requesterName.toLowerCase() === userName.toLowerCase()
         );
 
-        // Filter for Incoming Requests (requests received for user's books)
+        // Filter for Incoming Requests
         const incomingReqs = allRequests.filter(
           (req) =>
             req.ownerName &&
@@ -231,7 +242,7 @@ function DashboardPage() {
               <i className="bi bi-journal-x fs-1 text-muted"></i>
               <h5 className="fw-bold mt-2">You haven't listed any books yet</h5>
               <p className="text-muted small mb-3">
-                Add a book with your name as owner to see it here.
+                Add a book with your account to see it here.
               </p>
               <Link to="/add-book" className="btn btn-primary btn-sm px-4">
                 Add a Book

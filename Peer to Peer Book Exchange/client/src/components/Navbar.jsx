@@ -28,14 +28,14 @@ function Navbar() {
     navigate('/login');
   };
 
-  const displayName = user && user.name ? user.name.split(' ')[0] : 'Student';
+  const displayName = user?.name ? user.name.split(' ')[0] : '';
 
   return (
     <nav className="navbar navbar-expand-lg sticky-top shadow-sm navbar-custom">
       <div className="container">
         <Link
           className="navbar-brand fw-bold fs-4 d-flex align-items-center"
-          to={isAuthPage ? '/' : '/home'}
+          to={user ? '/home' : '/'}
         >
           <i className="bi bi-journal-bookmark-fill me-2 text-warning"></i>
           BookSwap
@@ -55,20 +55,8 @@ function Navbar() {
 
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav ms-auto align-items-center">
-            {isAuthPage ? (
-              <>
-                <li className="nav-item">
-                  <Link to="/login" className="btn btn-outline-light btn-sm px-3 ms-2 me-1">
-                    Login
-                  </Link>
-                </li>
-                <li className="nav-item">
-                  <Link to="/signup" className="btn btn-warning btn-sm px-3 fw-semibold">
-                    Sign Up
-                  </Link>
-                </li>
-              </>
-            ) : (
+            {/* If user is logged in and not on login/signup page */}
+            {user && !isAuthPage ? (
               <>
                 <li className="nav-item">
                   <NavLink className="nav-link px-3" to="/home">
@@ -105,6 +93,20 @@ function Navbar() {
                   >
                     Sign Out
                   </button>
+                </li>
+              </>
+            ) : (
+              /* If visitor is logged out OR on login/signup page */
+              <>
+                <li className="nav-item">
+                  <Link to="/login" className="btn btn-outline-light btn-sm px-3 ms-2 me-1">
+                    Login
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link to="/signup" className="btn btn-warning btn-sm px-3 fw-semibold">
+                    Sign Up
+                  </Link>
                 </li>
               </>
             )}

@@ -4,7 +4,7 @@ const api = axios.create({
   baseURL: 'https://peer-to-peer-book-exchange-ruse.onrender.com/api',
 });
 
-// Helper to get current user from LocalStorage
+// Returns null if no user is logged in
 export const getCurrentUser = () => {
   try {
     const stored = localStorage.getItem('user');
@@ -14,11 +14,8 @@ export const getCurrentUser = () => {
   } catch (err) {
     console.error('Error reading localStorage user:', err);
   }
-  return { name: 'Aniket Kripal', department: 'CSE', semester: '6th' };
+  return null;
 };
-
-// Default export object for legacy support
-export const CURRENT_USER = getCurrentUser();
 
 // --- AUTH API ---
 export const registerUserApi = async (userData) => {
@@ -46,10 +43,10 @@ export const getBookById = async (id) => {
 };
 
 export const createBook = async (bookData) => {
-  const user = getCurrentUser();
+  const user = getCurrentUser() || {};
   const newBook = {
     ...bookData,
-    ownerName: user.name || 'Aniket Kripal',
+    ownerName: user.name || 'Student',
     ownerDepartment: user.department || 'CSE',
     ownerSemester: user.semester || '6th',
   };
@@ -74,11 +71,11 @@ export const getRequests = async (filters = {}) => {
 };
 
 export const createRequest = async (bookId, ownerName) => {
-  const user = getCurrentUser();
+  const user = getCurrentUser() || {};
   const requestData = {
     book: bookId,
     ownerName: ownerName,
-    requesterName: user.name || 'Aniket Kripal',
+    requesterName: user.name || 'Student',
     requesterDepartment: user.department || 'CSE',
     requesterSemester: user.semester || '6th',
   };

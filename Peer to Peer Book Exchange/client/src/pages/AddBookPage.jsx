@@ -1,287 +1,221 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { createBook, CURRENT_USER } from "../api";
-
-const categories = [
-  "Computer Science",
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "Engineering",
-  "Literature",
-  "Humanities",
-  "Business",
-  "Other",
-];
-
-const conditions = ["New", "Like New", "Good", "Fair", "Poor"];
-
-const initialFormData = {
-  title: "",
-  author: "",
-  edition: "",
-  category: "",
-  condition: "",
-  description: "",
-  image: "",
-};
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { createBook, getCurrentUser } from '../api';
 
 function AddBookPage() {
-  const [formData, setFormData] = useState(initialFormData);
-  const [submitted, setSubmitted] = useState(false);
-  const [createdTitle, setCreatedTitle] = useState("");
-  const [errors, setErrors] = useState({});
-  const [submitting, setSubmitting] = useState(false);
-  const [apiError, setApiError] = useState("");
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Protect route: Redirect to /login if visitor is not signed in
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) {
+      navigate('/login');
+    } else {
+      setCurrentUser(user);
+    }
+  }, [navigate]);
+
+  const [formData, setFormData] = useState({
+    title: '',
+    author: '',
+    edition: '',
+    category: 'Computer Science',
+    condition: 'Good',
+    description: '',
+    image: '',
+  });
+
+  const categories = [
+    'Computer Science',
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Engineering',
+    'Literature',
+    'Humanities',
+    'Business',
+    'Other',
+  ];
+
+  const conditions = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
-  };
-
-  const validate = () => {
-    const newErrors = {};
-    if (!formData.title.trim()) newErrors.title = "Book title is required.";
-    if (!formData.author.trim()) newErrors.author = "Author name is required.";
-    if (!formData.category) newErrors.category = "Please select a category.";
-    if (!formData.condition) newErrors.condition = "Please select a condition.";
-    if (!formData.description.trim()) {
-      newErrors.description = "Please add a short description.";
-    } else if (formData.description.trim().length < 10) {
-      newErrors.description = "Description must be at least 10 characters.";
-    }
-    return newErrors;
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
+    setLoading(true);
+    setError('');
 
     try {
-      setSubmitting(true);
-      setApiError("");
-      await createBook({
-        ...formData,
-        ownerName: CURRENT_USER.name,
-        ownerDepartment: CURRENT_USER.department,
-        ownerSemester: CURRENT_USER.semester,
-        available: true,
-      });
-      setCreatedTitle(formData.title);
-      setSubmitted(true);
+      await createBook(formData);
+      navigate('/books');
     } catch (err) {
-      console.error(err);
-      setApiError(
-        err.response?.data?.message ||
-          "Failed to list book. Is the backend running?",
-      );
+      console.error('Error creating book:', err);
+      setError(err.response?.data?.message || 'Failed to list book. Please try again.');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const handleAddAnother = () => {
-    setFormData(initialFormData);
-    setErrors({});
-    setApiError("");
-    setSubmitted(false);
-  };
-
-  if (submitted) {
-    return (
-      <div className="container py-5">
-        <div className="row justify-content-center">
-          <div className="col-md-8 col-lg-6 text-center">
-            <div className="card card-custom p-5">
-              <div className="success-icon mb-3">✅</div>
-              <h3 className="fw-bold mb-2">Book Listed Successfully!</h3>
-              <p className="text-muted mb-4">
-                &quot;<strong>{createdTitle}</strong>&quot; has been added to
-                the exchange.
-              </p>
-              <div className="d-flex justify-content-center gap-3 flex-wrap">
-                <button
-                  className="btn btn-primary-custom"
-                  onClick={handleAddAnother}
-                >
-                  ➕ Add Another Book
-                </button>
-                <Link to="/books" className="btn btn-outline-secondary">
-                  📚 Browse Books
-                </Link>
-                <Link to="/dashboard" className="btn btn-outline-secondary">
-                  📊 Dashboard
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container py-4">
+    <div className="container py-5">
       <div className="row justify-content-center">
         <div className="col-md-8 col-lg-7">
-          <h2 className="section-title">List a Book for Exchange</h2>
-          <p className="text-muted mb-4">
-            Fill in the details below. Listing as{" "}
-            <strong>{CURRENT_USER.name}</strong>.
-          </p>
-
-          <div className="card card-custom p-4">
-            {apiError && <div className="alert alert-danger">{apiError}</div>}
-
-            <form onSubmit={handleSubmit} noValidate>
-              <div className="mb-3">
-                <label htmlFor="title" className="form-label fw-semibold">
-                  Book Title <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  className={`form-control ${errors.title ? "is-invalid" : ""}`}
-                  id="title"
-                  name="title"
-                  placeholder="e.g., Let Us C"
-                  value={formData.title}
-                  onChange={handleChange}
-                />
-                {errors.title && (
-                  <div className="invalid-feedback">{errors.title}</div>
-                )}
-              </div>
-
-              <div className="mb-3">
-                <label htmlFor="author" className="form-label fw-semibold">
-                  Author <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  className={`form-control ${errors.author ? "is-invalid" : ""}`}
-                  id="author"
-                  name="author"
-                  placeholder="e.g., Yashavant Kanetkar"
-                  value={formData.author}
-                  onChange={handleChange}
-                />
-                {errors.author && (
-                  <div className="invalid-feedback">{errors.author}</div>
-                )}
-              </div>
-
-              <div className="mb-3">
-                <label htmlFor="edition" className="form-label fw-semibold">
-                  Edition
-                </label>
-                <input
-                  type="text"
-                  className="form-control"
-                  id="edition"
-                  name="edition"
-                  placeholder="e.g., 19th Edition (optional)"
-                  value={formData.edition}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="row g-3 mb-3">
-                <div className="col-md-6">
-                  <label htmlFor="category" className="form-label fw-semibold">
-                    Category <span className="text-danger">*</span>
-                  </label>
-                  <select
-                    className={`form-select ${errors.category ? "is-invalid" : ""}`}
-                    id="category"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.category && (
-                    <div className="invalid-feedback">{errors.category}</div>
-                  )}
-                </div>
-
-                <div className="col-md-6">
-                  <label htmlFor="condition" className="form-label fw-semibold">
-                    Condition <span className="text-danger">*</span>
-                  </label>
-                  <select
-                    className={`form-select ${errors.condition ? "is-invalid" : ""}`}
-                    id="condition"
-                    name="condition"
-                    value={formData.condition}
-                    onChange={handleChange}
-                  >
-                    <option value="">Select condition</option>
-                    {conditions.map((cond) => (
-                      <option key={cond} value={cond}>
-                        {cond}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.condition && (
-                    <div className="invalid-feedback">{errors.condition}</div>
-                  )}
+          <div className="card shadow-sm border-0">
+            <div className="card-body p-4 p-md-5">
+              <div className="d-flex align-items-center mb-4">
+                <Link
+                  to="/books"
+                  className="btn btn-outline-secondary btn-sm me-3"
+                  title="Back to Books"
+                >
+                  <i className="bi bi-arrow-left"></i>
+                </Link>
+                <div>
+                  <h3 className="fw-bold mb-0" style={{ color: 'var(--primary-color)' }}>
+                    List a Book for Exchange
+                  </h3>
+                  <p className="text-muted small mb-0">
+                    Share your textbook or academic book with campus peers
+                  </p>
                 </div>
               </div>
 
-              <div className="mb-3">
-                <label htmlFor="description" className="form-label fw-semibold">
-                  Description <span className="text-danger">*</span>
-                </label>
-                <textarea
-                  className={`form-control ${
-                    errors.description ? "is-invalid" : ""
-                  }`}
-                  id="description"
-                  name="description"
-                  rows="4"
-                  placeholder="Condition, markings, missing pages, etc."
-                  value={formData.description}
-                  onChange={handleChange}
-                />
-                {errors.description && (
-                  <div className="invalid-feedback">{errors.description}</div>
-                )}
+              {error && <div className="alert alert-danger py-2 fs-6 mb-4">{error}</div>}
+
+              {/* Informative Owner Tag */}
+              <div className="alert alert-info py-2 small mb-4">
+                Listing as: <strong>{currentUser?.name || 'Student'}</strong> (
+                {currentUser?.department || 'CSE'}, {currentUser?.semester || '6th'} Semester)
               </div>
 
-              <div className="mb-4">
-                <label htmlFor="image" className="form-label fw-semibold">
-                  Image URL
-                </label>
-                <input
-                  type="url"
-                  className="form-control"
-                  id="image"
-                  name="image"
-                  placeholder="https://example.com/cover.jpg (optional)"
-                  value={formData.image}
-                  onChange={handleChange}
-                />
-              </div>
+              <form onSubmit={handleSubmit}>
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Book Title *</label>
+                  <input
+                    type="text"
+                    name="title"
+                    className="form-control"
+                    placeholder="e.g. Operating System Concepts"
+                    value={formData.title}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="btn btn-primary-custom btn-lg w-100"
-                disabled={submitting}
-              >
-                {submitting ? "Listing..." : "📚 List My Book"}
-              </button>
-            </form>
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label fw-semibold">Author *</label>
+                    <input
+                      type="text"
+                      name="author"
+                      className="form-control"
+                      placeholder="e.g. Abraham Silberschatz"
+                      value={formData.author}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label fw-semibold">Edition</label>
+                    <input
+                      type="text"
+                      name="edition"
+                      className="form-control"
+                      placeholder="e.g. 10th Edition"
+                      value={formData.edition}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label fw-semibold">Category *</label>
+                    <select
+                      name="category"
+                      className="form-select"
+                      value={formData.category}
+                      onChange={handleChange}
+                      required
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="col-md-6 mb-3">
+                    <label className="form-label fw-semibold">Condition *</label>
+                    <select
+                      name="condition"
+                      className="form-select"
+                      value={formData.condition}
+                      onChange={handleChange}
+                      required
+                    >
+                      {conditions.map((cond) => (
+                        <option key={cond} value={cond}>
+                          {cond}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Cover Image URL</label>
+                  <input
+                    type="url"
+                    name="image"
+                    className="form-control"
+                    placeholder="https://example.com/book-cover.jpg"
+                    value={formData.image}
+                    onChange={handleChange}
+                  />
+                  <div className="form-text small">
+                    Leave blank to use an auto-generated cover image.
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="form-label fw-semibold">Description</label>
+                  <textarea
+                    name="description"
+                    rows="4"
+                    className="form-control"
+                    placeholder="Describe the condition, notes, or highlights in the book..."
+                    value={formData.description}
+                    onChange={handleChange}
+                  ></textarea>
+                </div>
+
+                <div className="d-flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-primary fw-semibold px-4 py-2 flex-grow-1"
+                  >
+                    {loading ? 'Listing Book...' : 'List Book'}
+                  </button>
+                  <Link to="/books" className="btn btn-outline-secondary px-4 py-2">
+                    Cancel
+                  </Link>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       </div>
