@@ -1,7 +1,9 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
+// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/Peer-to-Peer-Book-Exchange/', // <-- Your EXACT GitHub repository name
-});
+  // Replace with your EXACT repository name
+  base: '/Peer-to-Peer-Book-Exchange/', 
+})
