@@ -11,7 +11,6 @@ function EditBookPage() {
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
 
-  // Protect route: Redirect to /login if visitor is not signed in
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) {
@@ -181,8 +180,11 @@ function EditBookPage() {
 
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">Book Title *</label>
+                  <label className="form-label fw-semibold" htmlFor="edit-title">
+                    Book Title *
+                  </label>
                   <input
+                    id="edit-title"
                     type="text"
                     name="title"
                     className="form-control"
@@ -195,8 +197,11 @@ function EditBookPage() {
 
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Author *</label>
+                    <label className="form-label fw-semibold" htmlFor="edit-author">
+                      Author *
+                    </label>
                     <input
+                      id="edit-author"
                       type="text"
                       name="author"
                       className="form-control"
@@ -208,8 +213,11 @@ function EditBookPage() {
                   </div>
 
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Edition</label>
+                    <label className="form-label fw-semibold" htmlFor="edit-edition">
+                      Edition
+                    </label>
                     <input
+                      id="edit-edition"
                       type="text"
                       name="edition"
                       className="form-control"
@@ -222,8 +230,11 @@ function EditBookPage() {
 
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Category *</label>
+                    <label className="form-label fw-semibold" htmlFor="edit-category">
+                      Category *
+                    </label>
                     <select
+                      id="edit-category"
                       name="category"
                       className="form-select"
                       value={formData.category}
@@ -239,8 +250,11 @@ function EditBookPage() {
                   </div>
 
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Condition *</label>
+                    <label className="form-label fw-semibold" htmlFor="edit-condition">
+                      Condition *
+                    </label>
                     <select
+                      id="edit-condition"
                       name="condition"
                       className="form-select"
                       value={formData.condition}
@@ -257,8 +271,11 @@ function EditBookPage() {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">Cover Image URL</label>
+                  <label className="form-label fw-semibold" htmlFor="edit-image">
+                    Cover Image URL
+                  </label>
                   <input
+                    id="edit-image"
                     type="url"
                     name="image"
                     className="form-control"
@@ -272,8 +289,11 @@ function EditBookPage() {
                 </div>
 
                 <div className="mb-4">
-                  <label className="form-label fw-semibold">Description</label>
+                  <label className="form-label fw-semibold" htmlFor="edit-description">
+                    Description
+                  </label>
                   <textarea
+                    id="edit-description"
                     name="description"
                     rows="4"
                     className="form-control"
@@ -287,12 +307,12 @@ function EditBookPage() {
                   <input
                     className="form-check-input ms-0 me-2"
                     type="checkbox"
-                    id="availableSwitch"
+                    id="edit-available"
                     name="available"
                     checked={formData.available}
                     onChange={handleChange}
                   />
-                  <label className="form-check-label fw-semibold" htmlFor="availableSwitch">
+                  <label className="form-check-label fw-semibold" htmlFor="edit-available">
                     Available for Swap
                   </label>
                   <div className="text-muted small">

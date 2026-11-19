@@ -70,8 +70,11 @@ function SignupPage() {
 
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">Full Name</label>
+                  <label className="form-label fw-semibold" htmlFor="signup-name">
+                    Full Name
+                  </label>
                   <input
+                    id="signup-name"
                     type="text"
                     name="fullName"
                     className="form-control"
@@ -83,8 +86,11 @@ function SignupPage() {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">University Email</label>
+                  <label className="form-label fw-semibold" htmlFor="signup-email">
+                    University Email
+                  </label>
                   <input
+                    id="signup-email"
                     type="email"
                     name="email"
                     className="form-control"
@@ -97,8 +103,11 @@ function SignupPage() {
 
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Department</label>
+                    <label className="form-label fw-semibold" htmlFor="signup-department">
+                      Department
+                    </label>
                     <select
+                      id="signup-department"
                       name="department"
                       className="form-select"
                       value={formData.department}
@@ -114,8 +123,11 @@ function SignupPage() {
                   </div>
 
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Semester</label>
+                    <label className="form-label fw-semibold" htmlFor="signup-semester">
+                      Semester
+                    </label>
                     <select
+                      id="signup-semester"
                       name="semester"
                       className="form-select"
                       value={formData.semester}
@@ -135,8 +147,11 @@ function SignupPage() {
 
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Password</label>
+                    <label className="form-label fw-semibold" htmlFor="signup-password">
+                      Password
+                    </label>
                     <input
+                      id="signup-password"
                       type="password"
                       name="password"
                       className="form-control"
@@ -149,8 +164,11 @@ function SignupPage() {
                   </div>
 
                   <div className="col-md-6 mb-4">
-                    <label className="form-label fw-semibold">Confirm Password</label>
+                    <label className="form-label fw-semibold" htmlFor="signup-confirm-password">
+                      Confirm Password
+                    </label>
                     <input
+                      id="signup-confirm-password"
                       type="password"
                       name="confirmPassword"
                       className="form-control"

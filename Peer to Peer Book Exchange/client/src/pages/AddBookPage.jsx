@@ -8,7 +8,6 @@ function AddBookPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Protect route: Redirect to /login if visitor is not signed in
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) {
@@ -92,7 +91,6 @@ function AddBookPage() {
 
               {error && <div className="alert alert-danger py-2 fs-6 mb-4">{error}</div>}
 
-              {/* Informative Owner Tag */}
               <div className="alert alert-info py-2 small mb-4">
                 Listing as: <strong>{currentUser?.name || 'Student'}</strong> (
                 {currentUser?.department || 'CSE'}, {currentUser?.semester || '6th'} Semester)
@@ -100,8 +98,11 @@ function AddBookPage() {
 
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">Book Title *</label>
+                  <label className="form-label fw-semibold" htmlFor="add-title">
+                    Book Title *
+                  </label>
                   <input
+                    id="add-title"
                     type="text"
                     name="title"
                     className="form-control"
@@ -114,8 +115,11 @@ function AddBookPage() {
 
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Author *</label>
+                    <label className="form-label fw-semibold" htmlFor="add-author">
+                      Author *
+                    </label>
                     <input
+                      id="add-author"
                       type="text"
                       name="author"
                       className="form-control"
@@ -127,8 +131,11 @@ function AddBookPage() {
                   </div>
 
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Edition</label>
+                    <label className="form-label fw-semibold" htmlFor="add-edition">
+                      Edition
+                    </label>
                     <input
+                      id="add-edition"
                       type="text"
                       name="edition"
                       className="form-control"
@@ -141,8 +148,11 @@ function AddBookPage() {
 
                 <div className="row">
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Category *</label>
+                    <label className="form-label fw-semibold" htmlFor="add-category">
+                      Category *
+                    </label>
                     <select
+                      id="add-category"
                       name="category"
                       className="form-select"
                       value={formData.category}
@@ -158,8 +168,11 @@ function AddBookPage() {
                   </div>
 
                   <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold">Condition *</label>
+                    <label className="form-label fw-semibold" htmlFor="add-condition">
+                      Condition *
+                    </label>
                     <select
+                      id="add-condition"
                       name="condition"
                       className="form-select"
                       value={formData.condition}
@@ -176,8 +189,11 @@ function AddBookPage() {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label fw-semibold">Cover Image URL</label>
+                  <label className="form-label fw-semibold" htmlFor="add-image">
+                    Cover Image URL
+                  </label>
                   <input
+                    id="add-image"
                     type="url"
                     name="image"
                     className="form-control"
@@ -191,8 +207,11 @@ function AddBookPage() {
                 </div>
 
                 <div className="mb-4">
-                  <label className="form-label fw-semibold">Description</label>
+                  <label className="form-label fw-semibold" htmlFor="add-description">
+                    Description
+                  </label>
                   <textarea
+                    id="add-description"
                     name="description"
                     rows="4"
                     className="form-control"
