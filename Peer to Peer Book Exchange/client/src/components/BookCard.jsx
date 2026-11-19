@@ -1,63 +1,59 @@
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom';
 
 function BookCard({ book }) {
-  // Condition badge color mapping
-  const conditionColors = {
-    New: "bg-success",
-    "Like New": "bg-info",
-    Good: "bg-primary",
-    Fair: "bg-warning text-dark",
-    Poor: "bg-danger",
-  };
+  if (!book) return null;
 
   return (
-    <div className="col">
-      <div className="card card-custom h-100 d-flex flex-column">
-        {/* Book Image */}
-        <div className="book-image-wrapper">
-          <img
-            src={book.image || "https://picsum.photos/seed/nobook/300/400"}
-            className="card-img-top book-image"
-            alt={book.title}
-          />
-          {/* Availability Badge */}
-          <span
-            className={`badge position-absolute top-0 end-0 m-2 ${
-              book.available ? "bg-success" : "bg-secondary"
-            }`}
-          >
-            {book.available ? "Available" : "Exchanged"}
-          </span>
-        </div>
+    <div className="card h-100 shadow-sm border-0 book-card transition-all">
+      <div
+        className="d-flex align-items-center justify-content-center bg-light overflow-hidden rounded-top"
+        style={{ height: '240px' }}
+      >
+        <img
+          src={book.image || 'https://covers.openlibrary.org/b/isbn/9780262033848-L.jpg'}
+          alt={book.title}
+          className="img-fluid"
+          style={{ maxHeight: '220px', maxWidth: '90%', objectFit: 'contain' }}
+          onError={(e) => {
+            e.target.src = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80';
+          }}
+        />
+      </div>
 
-        {/* Book Info */}
-        <div className="card-body d-flex flex-column">
-          <h6 className="card-title fw-bold mb-1 text-truncate">
-            {book.title}
-          </h6>
-          <p className="card-text text-muted small mb-2">by {book.author}</p>
-
-          {/* Badges */}
-          <div className="mb-3">
-            <span className="badge bg-light text-dark border me-1">
+      <div className="card-body p-3 d-flex flex-column justify-content-between">
+        <div>
+          <div className="d-flex justify-content-between align-items-start mb-2">
+            <span className="badge bg-light text-dark border small fw-normal">
               {book.category}
             </span>
             <span
-              className={`badge ${conditionColors[book.condition] || "bg-secondary"}`}
+              className={`badge ${
+                book.available ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'
+              } small`}
             >
-              {book.condition}
+              {book.available ? 'Available' : 'Exchanged'}
             </span>
           </div>
 
-          {/* View Details Button — pushed to bottom */}
-          <div className="mt-auto">
-            <Link
-              to={`/books/${book._id}`}
-              className="btn btn-sm btn-primary-custom w-100"
-            >
-              View Details
-            </Link>
+          <h6 className="card-title fw-bold mb-1 text-truncate" title={book.title}>
+            {book.title}
+          </h6>
+          <p className="card-text text-muted small mb-2 text-truncate">
+            by {book.author}
+          </p>
+        </div>
+
+        <div className="pt-2 border-top mt-2">
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <span className="text-muted small">Condition:</span>
+            <span className="fw-semibold small">{book.condition}</span>
           </div>
+          <Link
+            to={`/books/${book._id}`}
+            className="btn btn-outline-primary btn-sm w-100 fw-semibold"
+          >
+            View Details
+          </Link>
         </div>
       </div>
     </div>
