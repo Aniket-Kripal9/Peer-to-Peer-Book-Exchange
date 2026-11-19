@@ -14,7 +14,6 @@ function HomePage() {
       try {
         const data = await getBooks();
         if (!cancelled) {
-          // Safety check: verify data is an array before calling .slice()
           if (Array.isArray(data)) {
             setRecentBooks(data.slice(0, 6));
           } else if (data && Array.isArray(data.books)) {
@@ -60,7 +59,7 @@ function HomePage() {
               </p>
               <div className="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
                 <Link to="/books" className="btn btn-warning btn-lg fw-semibold px-4">
-                  Browse Available Books
+                  Browse Books
                 </Link>
                 <Link to="/add-book" className="btn btn-outline-light btn-lg fw-semibold px-4">
                   List Your Book
@@ -85,7 +84,10 @@ function HomePage() {
           <div className="row text-center g-4">
             <div className="col-md-4">
               <div className="p-3">
-                <div className="feature-icon bg-primary bg-opacity-10 text-primary rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style={{ width: '64px', height: '64px' }}>
+                <div
+                  className="feature-icon bg-primary bg-opacity-10 text-primary rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center"
+                  style={{ width: '64px', height: '64px' }}
+                >
                   <i className="bi bi-search fs-2"></i>
                 </div>
                 <h5 className="fw-bold">Search & Find</h5>
@@ -96,7 +98,10 @@ function HomePage() {
             </div>
             <div className="col-md-4">
               <div className="p-3">
-                <div className="feature-icon bg-success bg-opacity-10 text-success rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style={{ width: '64px', height: '64px' }}>
+                <div
+                  className="feature-icon bg-success bg-opacity-10 text-success rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center"
+                  style={{ width: '64px', height: '64px' }}
+                >
                   <i className="bi bi-arrow-left-right fs-2"></i>
                 </div>
                 <h5 className="fw-bold">Request Exchange</h5>
@@ -107,7 +112,10 @@ function HomePage() {
             </div>
             <div className="col-md-4">
               <div className="p-3">
-                <div className="feature-icon bg-warning bg-opacity-10 text-warning rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style={{ width: '64px', height: '64px' }}>
+                <div
+                  className="feature-icon bg-warning bg-opacity-10 text-warning rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center"
+                  style={{ width: '64px', height: '64px' }}
+                >
                   <i className="bi bi-people-fill fs-2"></i>
                 </div>
                 <h5 className="fw-bold">Campus Community</h5>
