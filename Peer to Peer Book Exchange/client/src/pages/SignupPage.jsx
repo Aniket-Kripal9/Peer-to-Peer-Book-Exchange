@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { registerUserApi } from '../api';
+import { useNavigate, Link } from 'react-router-dom';
+import { registerUserApi, setCurrentUser } from '../api';
 
 function SignupPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: '',
+    name: '',
     email: '',
+    department: '',
+    semester: '',
     password: '',
-    confirmPassword: '',
-    department: 'CSE',
-    semester: '6th',
+    confirmPassword: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,186 +18,171 @@ function SignupPage() {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [e.target.name]: e.target.value
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError('Passwords do not match.');
       return;
     }
 
-    setError('');
-    setLoading(true);
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
 
+    if (!formData.department || !formData.semester) {
+      setError('Please select department and semester.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const user = await registerUserApi({
-        name: formData.fullName,
+      const data = await registerUserApi({
+        name: formData.name,
         email: formData.email,
         password: formData.password,
         department: formData.department,
-        semester: formData.semester,
+        semester: formData.semester
       });
 
-      localStorage.setItem('user', JSON.stringify(user));
-      window.dispatchEvent(new Event('authChange'));
-      navigate('/home');
+      if (data.message && !data._id) {
+        setError(data.message);
+      } else {
+        setCurrentUser(data);
+        navigate('/home');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Try again.');
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container py-5">
-      <div className="row justify-content-center">
-        <div className="col-md-8 col-lg-6">
-          <div className="card shadow-sm border-0">
-            <div className="card-body p-4 p-md-5">
-              <div className="text-center mb-4">
-                <i className="bi bi-person-plus-fill fs-1 text-primary"></i>
-                <h3 className="fw-bold mt-2" style={{ color: 'var(--primary-color)' }}>
-                  Create an Account
-                </h3>
-                <p className="text-muted small">Join the BookSwap university community</p>
-              </div>
+    <div className="d-flex justify-content-center align-items-center py-5" style={{ backgroundColor: '#f8f9fa', minHeight: '90vh' }}>
+      <div className="card shadow-sm border-0 p-4" style={{ maxWidth: '600px', width: '100%', backgroundColor: '#fff' }}>
+        <h2 className="text-center fw-bold" style={{ color: '#2c3e50' }}>Create an Account</h2>
+        <p className="text-center text-muted mb-4">Join the BookSwap university community</p>
 
-              {error && <div className="alert alert-danger py-2 fs-6">{error}</div>}
+        {error && <div className="alert alert-danger">{error}</div>}
 
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label className="form-label fw-semibold" htmlFor="signup-name">
-                    Full Name
-                  </label>
-                  <input
-                    id="signup-name"
-                    type="text"
-                    name="fullName"
-                    className="form-control"
-                    placeholder="Aniket Kripal"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label htmlFor="name" className="form-label fw-semibold">Full Name</label>
+            <input
+              type="text"
+              className="form-control"
+              id="name"
+              name="name"
+              placeholder="Please enter your full name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-                <div className="mb-3">
-                  <label className="form-label fw-semibold" htmlFor="signup-email">
-                    University Email
-                  </label>
-                  <input
-                    id="signup-email"
-                    type="email"
-                    name="email"
-                    className="form-control"
-                    placeholder="aniket@university.edu"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+          <div className="mb-3">
+            <label htmlFor="email" className="form-label fw-semibold">University Email</label>
+            <input
+              type="email"
+              className="form-control"
+              id="email"
+              name="email"
+              placeholder="Please enter the email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold" htmlFor="signup-department">
-                      Department
-                    </label>
-                    <select
-                      id="signup-department"
-                      name="department"
-                      className="form-select"
-                      value={formData.department}
-                      onChange={handleChange}
-                    >
-                      <option value="CSE">CSE</option>
-                      <option value="ECE">ECE</option>
-                      <option value="ME">ME</option>
-                      <option value="Civil">Civil</option>
-                      <option value="EE">EE</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label htmlFor="department" className="form-label fw-semibold">Department</label>
+              <select
+                className="form-select"
+                id="department"
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select</option>
+                <option value="CSE">CSE</option>
+                <option value="ECE">ECE</option>
+                <option value="EE">EE</option>
+                <option value="ME">ME</option>
+                <option value="CE">CE</option>
+                <option value="IT">IT</option>
+              </select>
+            </div>
 
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold" htmlFor="signup-semester">
-                      Semester
-                    </label>
-                    <select
-                      id="signup-semester"
-                      name="semester"
-                      className="form-select"
-                      value={formData.semester}
-                      onChange={handleChange}
-                    >
-                      <option value="1st">1st Semester</option>
-                      <option value="2nd">2nd Semester</option>
-                      <option value="3rd">3rd Semester</option>
-                      <option value="4th">4th Semester</option>
-                      <option value="5th">5th Semester</option>
-                      <option value="6th">6th Semester</option>
-                      <option value="7th">7th Semester</option>
-                      <option value="8th">8th Semester</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold" htmlFor="signup-password">
-                      Password
-                    </label>
-                    <input
-                      id="signup-password"
-                      type="password"
-                      name="password"
-                      className="form-control"
-                      placeholder="At least 6 characters"
-                      value={formData.password}
-                      onChange={handleChange}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-
-                  <div className="col-md-6 mb-4">
-                    <label className="form-label fw-semibold" htmlFor="signup-confirm-password">
-                      Confirm Password
-                    </label>
-                    <input
-                      id="signup-confirm-password"
-                      type="password"
-                      name="confirmPassword"
-                      className="form-control"
-                      placeholder="Repeat password"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn btn-primary w-100 py-2 fw-semibold mb-3"
-                >
-                  {loading ? 'Creating Account...' : 'Sign Up'}
-                </button>
-              </form>
-
-              <div className="text-center mt-3 fs-6">
-                <span className="text-muted">Already have an account? </span>
-                <Link to="/login" className="text-decoration-none fw-semibold">
-                  Login
-                </Link>
-              </div>
+            <div className="col-md-6 mb-3">
+              <label htmlFor="semester" className="form-label fw-semibold">Semester</label>
+              <select
+                className="form-select"
+                id="semester"
+                name="semester"
+                value={formData.semester}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select</option>
+                <option value="1st Semester">1st Semester</option>
+                <option value="2nd Semester">2nd Semester</option>
+                <option value="3rd Semester">3rd Semester</option>
+                <option value="4th Semester">4th Semester</option>
+                <option value="5th Semester">5th Semester</option>
+                <option value="6th Semester">6th Semester</option>
+                <option value="7th Semester">7th Semester</option>
+                <option value="8th Semester">8th Semester</option>
+              </select>
             </div>
           </div>
-        </div>
+
+          <div className="row">
+            <div className="col-md-6 mb-3">
+              <label htmlFor="password" className="form-label fw-semibold">Password</label>
+              <input
+                type="password"
+                className="form-control"
+                id="password"
+                name="password"
+                placeholder="At least 6 characters"
+                value={formData.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="col-md-6 mb-4">
+              <label htmlFor="confirmPassword" className="form-label fw-semibold">Confirm Password</label>
+              <input
+                type="password"
+                className="form-control"
+                id="confirmPassword"
+                name="confirmPassword"
+                placeholder="Repeat password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <button type="submit" className="btn btn-primary w-100 fw-semibold" disabled={loading}>
+            {loading ? 'Signing Up...' : 'Sign Up'}
+          </button>
+        </form>
+
+        <p className="text-center mt-3 mb-0">
+          Already have an account? <Link to="/login">Login</Link>
+        </p>
       </div>
     </div>
   );
