@@ -1,96 +1,140 @@
-import axios from 'axios';
+// Automatically switch between local backend and Render deployment
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000/api'
+    : 'https://peer-to-peer-book-exchange-ruse.onrender.com/api');
 
-const api = axios.create({
-  baseURL: 'https://peer-to-peer-book-exchange-ruse.onrender.com/api',
-});
-
-// Returns null if no user is logged in
+// --- Auth Helpers ---
 export const getCurrentUser = () => {
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return null;
   try {
-    const stored = localStorage.getItem('user');
-    if (stored) {
-      return JSON.parse(stored);
-    }
+    return JSON.parse(userStr);
   } catch (err) {
-    console.error('Error reading localStorage user:', err);
+    return null;
   }
-  return null;
 };
 
-// --- AUTH API ---
+export const setCurrentUser = (user) => {
+  if (user) {
+    localStorage.setItem('user', JSON.stringify(user));
+  } else {
+    localStorage.removeItem('user');
+  }
+  window.dispatchEvent(new Event('authChange'));
+};
+
+export const logoutUser = () => {
+  localStorage.removeItem('user');
+  window.dispatchEvent(new Event('authChange'));
+};
+
 export const registerUserApi = async (userData) => {
-  const res = await api.post('/users/register', userData);
-  return res.data;
+  const res = await fetch(`${API_URL}/users/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(userData),
+  });
+  return res.json();
 };
 
 export const loginUserApi = async (credentials) => {
-  const res = await api.post('/users/login', credentials);
-  return res.data;
+  const res = await fetch(`${API_URL}/users/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+  return res.json();
 };
 
-// --- BOOKS API ---
-export const getBooks = async (search = '', category = '') => {
-  const params = {};
-  if (search) params.search = search;
-  if (category) params.category = category;
-  const res = await api.get('/books', { params });
-  return res.data;
+// --- Books API ---
+export const getBooks = async (params = {}) => {
+  const queryParams = new URLSearchParams();
+  if (params.search) queryParams.append('search', params.search);
+  if (params.category && params.category !== 'All') queryParams.append('category', params.category);
+
+  const res = await fetch(`${API_URL}/books?${queryParams.toString()}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 };
 
 export const getBookById = async (id) => {
-  const res = await api.get(`/books/${id}`);
-  return res.data;
+  const res = await fetch(`${API_URL}/books/${id}`);
+  const data = await res.json();
+  return data._id ? data : data.book;
 };
 
 export const createBook = async (bookData) => {
-  const user = getCurrentUser() || {};
-  const newBook = {
-    ...bookData,
-    ownerName: user.name || 'Student',
-    ownerDepartment: user.department || 'CSE',
-    ownerSemester: user.semester || '6th',
-  };
-  const res = await api.post('/books', newBook);
-  return res.data;
+  const res = await fetch(`${API_URL}/books`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bookData),
+  });
+  return res.json();
 };
 
 export const updateBook = async (id, bookData) => {
-  const res = await api.put(`/books/${id}`, bookData);
-  return res.data;
+  const res = await fetch(`${API_URL}/books/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bookData),
+  });
+  return res.json();
 };
 
 export const deleteBook = async (id) => {
-  const res = await api.delete(`/books/${id}`);
-  return res.data;
+  const res = await fetch(`${API_URL}/books/${id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
 };
 
-// --- REQUESTS API ---
-export const getRequests = async (filters = {}) => {
-  const res = await api.get('/requests', { params: filters });
-  return res.data;
+// --- Requests API (Updated with Security Headers) ---
+export const getRequests = async (ownerEmail = '') => {
+  const user = getCurrentUser();
+  const res = await fetch(`${API_URL}/requests?ownerEmail=${ownerEmail}`, {
+    headers: {
+      'x-user-id': user?._id || ''
+    }
+  });
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
 };
 
-export const createRequest = async (bookId, ownerName) => {
-  const user = getCurrentUser() || {};
-  const requestData = {
-    book: bookId,
-    ownerName: ownerName,
-    requesterName: user.name || 'Student',
-    requesterDepartment: user.department || 'CSE',
-    requesterSemester: user.semester || '6th',
-  };
-  const res = await api.post('/requests', requestData);
-  return res.data;
+export const createRequest = async (requestData) => {
+  const user = getCurrentUser();
+  const res = await fetch(`${API_URL}/requests`, {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'x-user-id': user?._id || ''
+    },
+    body: JSON.stringify(requestData),
+  });
+  return res.json();
 };
 
 export const updateRequestStatus = async (id, status) => {
-  const res = await api.put(`/requests/${id}`, { status });
-  return res.data;
+  const user = getCurrentUser();
+  const res = await fetch(`${API_URL}/requests/${id}`, {
+    method: 'PUT',
+    headers: { 
+      'Content-Type': 'application/json',
+      'x-user-id': user?._id || ''
+    },
+    body: JSON.stringify({ status }),
+  });
+  return res.json();
 };
 
 export const deleteRequest = async (id) => {
-  const res = await api.delete(`/requests/${id}`);
-  return res.data;
+  const user = getCurrentUser();
+  const res = await fetch(`${API_URL}/requests/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'x-user-id': user?._id || ''
+    }
+  });
+  return res.json();
 };
-
-export default api;
