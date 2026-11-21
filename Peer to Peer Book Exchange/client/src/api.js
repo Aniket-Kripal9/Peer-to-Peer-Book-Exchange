@@ -1,196 +1,96 @@
-// Automatically switch between local backend and Render deployment
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:5000/api'
-    : 'https://peer-to-peer-book-exchange-ruse.onrender.com/api');
+import axios from 'axios';
 
-// --- Auth Helpers ---
+const api = axios.create({
+  baseURL: 'https://peer-to-peer-book-exchange-ruse.onrender.com/api',
+});
+
+// Returns null if no user is logged in
 export const getCurrentUser = () => {
-  const userStr = localStorage.getItem('user');
-  if (!userStr) return null;
   try {
-    return JSON.parse(userStr);
-  } catch {
-    return null;
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (err) {
+    console.error('Error reading localStorage user:', err);
   }
+  return null;
 };
 
-export const setCurrentUser = (user) => {
-  if (user) {
-    localStorage.setItem('user', JSON.stringify(user));
-  } else {
-    localStorage.removeItem('user');
-  }
-  window.dispatchEvent(new Event('authChange'));
-};
-
-export const logoutUser = () => {
-  localStorage.removeItem('user');
-  window.dispatchEvent(new Event('authChange'));
-};
-
+// --- AUTH API ---
 export const registerUserApi = async (userData) => {
-  const res = await fetch(`${API_URL}/users/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(userData),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Registration failed');
-  }
-  return data;
+  const res = await api.post('/users/register', userData);
+  return res.data;
 };
 
 export const loginUserApi = async (credentials) => {
-  const res = await fetch(`${API_URL}/users/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Invalid email or password');
-  }
-  return data;
+  const res = await api.post('/users/login', credentials);
+  return res.data;
 };
 
-// --- Books API ---
-export const getBooks = async (params = {}) => {
-  try {
-    const queryParams = new URLSearchParams();
-    if (params.search && params.search.trim()) {
-      queryParams.append('search', params.search.trim());
-    }
-    if (params.category && params.category !== 'All') {
-      queryParams.append('category', params.category);
-    }
-
-    const qs = queryParams.toString();
-    const url = qs ? `${API_URL}/books?${qs}` : `${API_URL}/books`;
-
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error(`Failed to fetch books: ${res.status}`);
-      return [];
-    }
-    const data = await res.json();
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray(data.books)) return data.books;
-    return [];
-  } catch (err) {
-    console.error('Error fetching books:', err);
-    return [];
-  }
+// --- BOOKS API ---
+export const getBooks = async (search = '', category = '') => {
+  const params = {};
+  if (search) params.search = search;
+  if (category) params.category = category;
+  const res = await api.get('/books', { params });
+  return res.data;
 };
 
 export const getBookById = async (id) => {
-  const res = await fetch(`${API_URL}/books/${id}`);
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Failed to fetch book');
-  }
-  return data._id ? data : data.book;
+  const res = await api.get(`/books/${id}`);
+  return res.data;
 };
 
 export const createBook = async (bookData) => {
-  const res = await fetch(`${API_URL}/books`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(bookData),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Failed to create book');
-  }
-  return data;
+  const user = getCurrentUser() || {};
+  const newBook = {
+    ...bookData,
+    ownerName: user.name || 'Student',
+    ownerDepartment: user.department || 'CSE',
+    ownerSemester: user.semester || '6th',
+  };
+  const res = await api.post('/books', newBook);
+  return res.data;
 };
 
 export const updateBook = async (id, bookData) => {
-  const res = await fetch(`${API_URL}/books/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(bookData),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Failed to update book');
-  }
-  return data;
+  const res = await api.put(`/books/${id}`, bookData);
+  return res.data;
 };
 
 export const deleteBook = async (id) => {
-  const res = await fetch(`${API_URL}/books/${id}`, {
-    method: 'DELETE',
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Failed to delete book');
-  }
-  return data;
+  const res = await api.delete(`/books/${id}`);
+  return res.data;
 };
 
-// --- Requests API ---
-export const getRequests = async (ownerEmail = '') => {
-  const user = getCurrentUser();
-  const res = await fetch(`${API_URL}/requests?ownerEmail=${ownerEmail}`, {
-    headers: {
-      'x-user-id': user?._id || '',
-    },
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Failed to fetch requests');
-  }
-  return Array.isArray(data) ? data : [];
+// --- REQUESTS API ---
+export const getRequests = async (filters = {}) => {
+  const res = await api.get('/requests', { params: filters });
+  return res.data;
 };
 
-export const createRequest = async (requestData) => {
-  const user = getCurrentUser();
-  const res = await fetch(`${API_URL}/requests`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': user?._id || '',
-    },
-    body: JSON.stringify(requestData),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Failed to send exchange request');
-  }
-  return data;
+export const createRequest = async (bookId, ownerName) => {
+  const user = getCurrentUser() || {};
+  const requestData = {
+    book: bookId,
+    ownerName: ownerName,
+    requesterName: user.name || 'Student',
+    requesterDepartment: user.department || 'CSE',
+    requesterSemester: user.semester || '6th',
+  };
+  const res = await api.post('/requests', requestData);
+  return res.data;
 };
 
 export const updateRequestStatus = async (id, status) => {
-  const user = getCurrentUser();
-  const res = await fetch(`${API_URL}/requests/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': user?._id || '',
-    },
-    body: JSON.stringify({ status }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Failed to update request');
-  }
-  return data;
+  const res = await api.put(`/requests/${id}`, { status });
+  return res.data;
 };
 
 export const deleteRequest = async (id) => {
-  const user = getCurrentUser();
-  const res = await fetch(`${API_URL}/requests/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'x-user-id': user?._id || '',
-    },
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || 'Failed to cancel request');
-  }
-  return data;
+  const res = await api.delete(`/requests/${id}`);
+  return res.data;
 };
+
+export default api;
