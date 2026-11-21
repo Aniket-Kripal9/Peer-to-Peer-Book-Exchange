@@ -9,8 +9,8 @@ function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    department: 'CSE',
-    semester: '6th',
+    department: '',
+    semester: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,6 +24,11 @@ function SignupPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!formData.department || !formData.semester) {
+      setError('Please select your department and semester.');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -78,7 +83,7 @@ function SignupPage() {
                     type="text"
                     name="fullName"
                     className="form-control"
-                    placeholder="Aniket Kripal"
+                    placeholder="Please enter your full name"
                     value={formData.fullName}
                     onChange={handleChange}
                     required
@@ -94,7 +99,7 @@ function SignupPage() {
                     type="email"
                     name="email"
                     className="form-control"
-                    placeholder="aniket@university.edu"
+                    placeholder="Please enter the email"
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -112,7 +117,9 @@ function SignupPage() {
                       className="form-select"
                       value={formData.department}
                       onChange={handleChange}
+                      required
                     >
+                      <option value="">Select</option>
                       <option value="CSE">CSE</option>
                       <option value="ECE">ECE</option>
                       <option value="ME">ME</option>
@@ -132,7 +139,9 @@ function SignupPage() {
                       className="form-select"
                       value={formData.semester}
                       onChange={handleChange}
+                      required
                     >
+                      <option value="">Select</option>
                       <option value="1st">1st Semester</option>
                       <option value="2nd">2nd Semester</option>
                       <option value="3rd">3rd Semester</option>
