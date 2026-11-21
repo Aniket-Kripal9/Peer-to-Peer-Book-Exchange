@@ -1,311 +1,351 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
+  getCurrentUser,
   getBooks,
+  deleteBook,
   getRequests,
   updateRequestStatus,
-  deleteBook,
   deleteRequest,
-  getCurrentUser,
 } from '../api';
-import BookCard from '../components/BookCard';
-import RequestCard from '../components/RequestCard';
 
 function DashboardPage() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
-  const [myListings, setMyListings] = useState([]);
-  const [myRequests, setMyRequests] = useState([]);
+  const currentUser = getCurrentUser();
+
+  const [myBooks, setMyBooks] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
-  const [activeTab, setActiveTab] = useState('listings');
+  const [outgoingRequests, setOutgoingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('listings');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  // Protect route: Redirect to /login if visitor is not signed in
   useEffect(() => {
-    const user = getCurrentUser();
-    if (!user) {
+    if (!currentUser) {
       navigate('/login');
+      return;
     }
-  }, [navigate]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDashboardData() {
-      const user = getCurrentUser();
-      if (!user) return;
-
+    const fetchDashboardData = async () => {
       try {
-        if (!cancelled) {
-          setCurrentUser(user);
-        }
+        setLoading(true);
+        setErrorMsg('');
 
-        const [booksRes, requestsRes] = await Promise.all([
+        const [booksData, requestsData] = await Promise.all([
           getBooks(),
-          getRequests(),
+          getRequests(currentUser.email),
         ]);
 
-        if (cancelled) return;
+        const myListed = booksData.filter((b) => b.ownerEmail === currentUser.email);
+        setMyBooks(myListed);
 
-        // Defensive normalization to arrays
-        const allBooks = Array.isArray(booksRes)
-          ? booksRes
-          : booksRes?.books && Array.isArray(booksRes.books)
-          ? booksRes.books
-          : [];
+        const incoming = requestsData.filter((r) => r.ownerEmail === currentUser.email);
+        const outgoing = requestsData.filter((r) => r.requesterId === currentUser._id);
 
-        const allRequests = Array.isArray(requestsRes)
-          ? requestsRes
-          : requestsRes?.requests && Array.isArray(requestsRes.requests)
-          ? requestsRes.requests
-          : [];
-
-        const userName = user?.name || '';
-
-        // Filter for My Listings
-        const listings = allBooks.filter(
-          (book) =>
-            book.ownerName &&
-            book.ownerName.toLowerCase() === userName.toLowerCase()
-        );
-
-        // Filter for My Requests
-        const myReqs = allRequests.filter(
-          (req) =>
-            req.requesterName &&
-            req.requesterName.toLowerCase() === userName.toLowerCase()
-        );
-
-        // Filter for Incoming Requests
-        const incomingReqs = allRequests.filter(
-          (req) =>
-            req.ownerName &&
-            req.ownerName.toLowerCase() === userName.toLowerCase()
-        );
-
-        setMyListings(listings);
-        setMyRequests(myReqs);
-        setIncomingRequests(incomingReqs);
-        setError('');
+        setIncomingRequests(incoming);
+        setOutgoingRequests(outgoing);
       } catch (err) {
-        console.error('Error loading dashboard:', err);
-        if (!cancelled) {
-          setError('Failed to load dashboard data. Please try again.');
-        }
+        setErrorMsg(err.message || 'Failed to load dashboard data.');
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
-    }
-
-    loadDashboardData();
-
-    return () => {
-      cancelled = true;
     };
-  }, []);
 
-  const handleAccept = async (requestId) => {
-    try {
-      await updateRequestStatus(requestId, 'Accepted');
-      window.location.reload();
-    } catch (err) {
-      alert('Failed to accept request: ' + (err.response?.data?.message || err.message));
-    }
-  };
+    fetchDashboardData();
+  }, [currentUser, navigate]);
 
-  const handleReject = async (requestId) => {
-    try {
-      await updateRequestStatus(requestId, 'Rejected');
-      window.location.reload();
-    } catch (err) {
-      alert('Failed to reject request: ' + (err.response?.data?.message || err.message));
-    }
-  };
-
-  const handleDeleteListing = async (bookId) => {
+  const handleDeleteBook = async (bookId) => {
     if (!window.confirm('Are you sure you want to delete this listing?')) return;
+    setErrorMsg('');
+    setSuccessMsg('');
+
     try {
       await deleteBook(bookId);
-      setMyListings((prev) => prev.filter((b) => b._id !== bookId));
+      // ONLY update UI if the backend deletion succeeds
+      setMyBooks((prev) => prev.filter((b) => b._id !== bookId));
+      setSuccessMsg('Book deleted successfully.');
     } catch (err) {
-      alert('Failed to delete book: ' + (err.response?.data?.message || err.message));
+      setErrorMsg(err.message || 'Failed to delete book.');
     }
   };
 
-  const handleDeleteMyRequest = async (requestId) => {
+  const handleUpdateStatus = async (requestId, newStatus) => {
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      await updateRequestStatus(requestId, newStatus);
+      // ONLY update UI if the backend update succeeds
+      setIncomingRequests((prev) =>
+        prev.map((r) => (r._id === requestId ? { ...r, status: newStatus } : r))
+      );
+      setSuccessMsg(`Request marked as ${newStatus}.`);
+    } catch (err) {
+      setErrorMsg(err.message || `Failed to update request.`);
+    }
+  };
+
+  const handleCancelRequest = async (requestId) => {
     if (!window.confirm('Are you sure you want to cancel this request?')) return;
+    setErrorMsg('');
+    setSuccessMsg('');
+
     try {
       await deleteRequest(requestId);
-      setMyRequests((prev) => prev.filter((r) => r._id !== requestId));
+      // ONLY update UI if the backend cancellation succeeds
+      setOutgoingRequests((prev) => prev.filter((r) => r._id !== requestId));
+      setSuccessMsg('Request cancelled successfully.');
     } catch (err) {
-      alert('Failed to delete request: ' + (err.response?.data?.message || err.message));
+      setErrorMsg(err.message || 'Failed to cancel request.');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container py-5 text-center">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
+  if (!currentUser) return null;
 
   return (
-    <div className="container py-5">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+    <div className="container py-4" style={{ minHeight: '80vh', maxWidth: '1000px' }}>
+      {/* Header section matching screenshot */}
+      <div className="d-flex justify-content-between align-items-start mb-4">
         <div>
-          <h2 className="fw-bold mb-1" style={{ color: 'var(--primary-color)' }}>
-            My Dashboard
-          </h2>
+          <h2 className="fw-bold mb-1" style={{ color: '#2c3e50' }}>My Dashboard</h2>
           <p className="text-muted small mb-0">
-            Logged in as <strong>{currentUser?.name || 'Student'}</strong> (
-            {currentUser?.department || 'CSE'}, {currentUser?.semester || '6th'} Semester)
+            Logged in as <strong>{currentUser.name}</strong> ({currentUser.department || 'CSE'}, {currentUser.semester || '1st Semester'})
           </p>
         </div>
-        <Link to="/add-book" className="btn btn-primary fw-semibold">
-          <i className="bi bi-plus-lg me-1"></i> Add New Book
+        <Link to="/add-book" className="btn btn-primary fw-semibold px-3">
+          Add New Book
         </Link>
       </div>
 
-      {error && <div className="alert alert-danger mb-4">{error}</div>}
+      {/* Alerts */}
+      {errorMsg && <div className="alert alert-danger alert-dismissible">{errorMsg}</div>}
+      {successMsg && <div className="alert alert-success alert-dismissible">{successMsg}</div>}
 
-      {/* Navigation Tabs */}
-      <ul className="nav nav-tabs mb-4 border-bottom">
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'listings' ? 'active fw-bold' : 'text-secondary'}`}
-            onClick={() => setActiveTab('listings')}
-          >
-            <i className="bi bi-journal-text me-2"></i>
-            My Listings{' '}
-            <span className="badge bg-primary rounded-pill ms-1">{myListings.length}</span>
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'myRequests' ? 'active fw-bold' : 'text-secondary'}`}
-            onClick={() => setActiveTab('myRequests')}
-          >
-            <i className="bi bi-send me-2"></i>
-            My Requests{' '}
-            <span className="badge bg-secondary rounded-pill ms-1">{myRequests.length}</span>
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === 'incomingRequests' ? 'active fw-bold' : 'text-secondary'}`}
-            onClick={() => setActiveTab('incomingRequests')}
-          >
-            <i className="bi bi-inbox me-2"></i>
-            Incoming Requests{' '}
-            <span className="badge bg-warning text-dark rounded-pill ms-1">
-              {incomingRequests.length}
-            </span>
-          </button>
-        </li>
-      </ul>
+      {/* Tab Navigation matching screenshot */}
+      <div className="d-flex gap-2 mb-3">
+        <button
+          className={`btn btn-sm px-3 py-2 fw-semibold rounded-top ${
+            activeTab === 'listings'
+              ? 'bg-white text-dark shadow-sm border border-bottom-0'
+              : 'text-muted border-0 bg-transparent'
+          }`}
+          onClick={() => setActiveTab('listings')}
+        >
+          My Listings{' '}
+          <span className="badge bg-primary rounded-pill ms-1">{myBooks.length}</span>
+        </button>
 
-      {/* Tab Content */}
-      {activeTab === 'listings' && (
-        <div>
-          {myListings.length > 0 ? (
-            <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-              {myListings.map((book) => (
-                <div className="col" key={book._id}>
-                  <div className="position-relative">
-                    <BookCard book={book} />
-                    <div className="mt-2 d-flex gap-2">
-                      <Link
-                        to={`/edit-book/${book._id}`}
-                        className="btn btn-sm btn-outline-secondary w-50"
-                      >
-                        <i className="bi bi-pencil me-1"></i> Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDeleteListing(book._id)}
-                        className="btn btn-sm btn-outline-danger w-50"
-                      >
-                        <i className="bi bi-trash me-1"></i> Delete
-                      </button>
-                    </div>
+        <button
+          className={`btn btn-sm px-3 py-2 fw-semibold rounded-top ${
+            activeTab === 'requests'
+              ? 'bg-white text-dark shadow-sm border border-bottom-0'
+              : 'text-muted border-0 bg-transparent'
+          }`}
+          onClick={() => setActiveTab('requests')}
+        >
+          My Requests{' '}
+          <span className="badge bg-secondary rounded-pill ms-1">{outgoingRequests.length}</span>
+        </button>
+
+        <button
+          className={`btn btn-sm px-3 py-2 fw-semibold rounded-top ${
+            activeTab === 'incoming'
+              ? 'bg-white text-dark shadow-sm border border-bottom-0'
+              : 'text-muted border-0 bg-transparent'
+          }`}
+          onClick={() => setActiveTab('incoming')}
+        >
+          Incoming Requests{' '}
+          <span className="badge bg-warning text-dark rounded-pill ms-1">
+            {incomingRequests.length}
+          </span>
+        </button>
+      </div>
+
+      {/* Main Tab Content Card */}
+      {loading ? (
+        <div className="card shadow-sm border text-center p-5">
+          <div className="spinner-border text-primary mx-auto mb-2" role="status"></div>
+          <p className="text-muted mb-0">Loading dashboard...</p>
+        </div>
+      ) : (
+        <>
+          {/* TAB 1: My Listings */}
+          {activeTab === 'listings' && (
+            <div>
+              {myBooks.length === 0 ? (
+                <div className="card shadow-sm border text-center py-5 px-3">
+                  <h5 className="fw-bold mb-2" style={{ color: '#2c3e50' }}>
+                    You haven't listed any books yet
+                  </h5>
+                  <p className="text-muted small mb-4">
+                    Add a book with your account to see it here.
+                  </p>
+                  <div>
+                    <Link to="/add-book" className="btn btn-primary px-4 fw-semibold">
+                      Add a Book
+                    </Link>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-5 bg-white rounded-3 shadow-sm p-4">
-              <i className="bi bi-journal-x fs-1 text-muted"></i>
-              <h5 className="fw-bold mt-2">You haven't listed any books yet</h5>
-              <p className="text-muted small mb-3">
-                Add a book with your account to see it here.
-              </p>
-              <Link to="/add-book" className="btn btn-primary btn-sm px-4">
-                Add a Book
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'myRequests' && (
-        <div>
-          {myRequests.length > 0 ? (
-            <div className="row row-cols-1 row-cols-md-2 g-3">
-              {myRequests.map((req) => (
-                <div className="col" key={req._id}>
-                  <RequestCard
-                    request={req}
-                    isIncoming={false}
-                    onDelete={() => handleDeleteMyRequest(req._id)}
-                  />
+              ) : (
+                <div className="row g-4">
+                  {myBooks.map((book) => (
+                    <div className="col-12 col-md-6 col-lg-4" key={book._id}>
+                      <div className="card h-100 shadow-sm border">
+                        <img
+                          src={book.image || 'https://via.placeholder.com/300x400?text=No+Cover'}
+                          alt={book.title}
+                          className="card-img-top"
+                          style={{ height: '200px', objectFit: 'cover' }}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://via.placeholder.com/300x400?text=No+Cover';
+                          }}
+                        />
+                        <div className="card-body d-flex flex-column">
+                          <span className="badge bg-secondary mb-2 align-self-start">{book.category}</span>
+                          <h6 className="card-title fw-bold text-truncate mb-1">{book.title}</h6>
+                          <p className="card-text text-muted small mb-2">by {book.author}</p>
+                          <div className="d-flex gap-2 mt-auto pt-2 border-top">
+                            <Link to={`/edit-book/${book._id}`} className="btn btn-sm btn-outline-primary w-50">
+                              Edit
+                            </Link>
+                            <button
+                              onClick={() => handleDeleteBook(book._id)}
+                              className="btn btn-sm btn-outline-danger w-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-5 bg-white rounded-3 shadow-sm p-4">
-              <i className="bi bi-send-x fs-1 text-muted"></i>
-              <h5 className="fw-bold mt-2">No outgoing exchange requests</h5>
-              <p className="text-muted small mb-3">
-                Browse available books and send requests to fellow students.
-              </p>
-              <Link to="/books" className="btn btn-primary btn-sm px-4">
-                Browse Books
-              </Link>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {activeTab === 'incomingRequests' && (
-        <div>
-          {incomingRequests.length > 0 ? (
-            <div className="row row-cols-1 row-cols-md-2 g-3">
-              {incomingRequests.map((req) => (
-                <div className="col" key={req._id}>
-                  <RequestCard
-                    request={req}
-                    isIncoming={true}
-                    onAccept={() => handleAccept(req._id)}
-                    onReject={() => handleReject(req._id)}
-                  />
+          {/* TAB 2: My Requests (Sent) */}
+          {activeTab === 'requests' && (
+            <div>
+              {outgoingRequests.length === 0 ? (
+                <div className="card shadow-sm border text-center py-5 px-3">
+                  <h5 className="fw-bold mb-2" style={{ color: '#2c3e50' }}>
+                    You haven't requested any books yet
+                  </h5>
+                  <p className="text-muted small mb-4">
+                    Browse available books and send exchange requests to get started.
+                  </p>
+                  <div>
+                    <Link to="/books" className="btn btn-primary px-4 fw-semibold">
+                      Browse Books
+                    </Link>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-5 bg-white rounded-3 shadow-sm p-4">
-              <i className="bi bi-inbox-fill fs-1 text-muted"></i>
-              <h5 className="fw-bold mt-2">No incoming requests yet</h5>
-              <p className="text-muted small mb-0">
-                When another student requests one of your listed books, it will appear here.
-              </p>
+              ) : (
+                <div className="row g-3">
+                  {outgoingRequests.map((req) => (
+                    <div className="col-12 col-md-6" key={req._id}>
+                      <div className="card shadow-sm border p-3">
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <div>
+                            <h6 className="fw-bold mb-1">{req.bookTitle}</h6>
+                            <p className="text-muted small mb-0">Owner: {req.ownerName} ({req.ownerEmail})</p>
+                          </div>
+                          <span
+                            className={`badge ${
+                              req.status === 'Accepted'
+                                ? 'bg-success'
+                                : req.status === 'Rejected'
+                                ? 'bg-danger'
+                                : 'bg-warning text-dark'
+                            }`}
+                          >
+                            {req.status}
+                          </span>
+                        </div>
+                        {req.status === 'Pending' && (
+                          <div className="mt-2 pt-2 border-top text-end">
+                            <button
+                              onClick={() => handleCancelRequest(req._id)}
+                              className="btn btn-sm btn-outline-secondary"
+                            >
+                              Cancel Request
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </div>
+
+          {/* TAB 3: Incoming Requests */}
+          {activeTab === 'incoming' && (
+            <div>
+              {incomingRequests.length === 0 ? (
+                <div className="card shadow-sm border text-center py-5 px-3">
+                  <h5 className="fw-bold mb-2" style={{ color: '#2c3e50' }}>
+                    No incoming requests yet
+                  </h5>
+                  <p className="text-muted small mb-0">
+                    When another student requests one of your books, it will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="row g-3">
+                  {incomingRequests.map((req) => (
+                    <div className="col-12 col-md-6" key={req._id}>
+                      <div className="card shadow-sm border p-3">
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <div>
+                            <h6 className="fw-bold mb-1">{req.bookTitle}</h6>
+                            <p className="text-muted small mb-0">Requested by: {req.requesterName}</p>
+                          </div>
+                          <span
+                            className={`badge ${
+                              req.status === 'Accepted'
+                                ? 'bg-success'
+                                : req.status === 'Rejected'
+                                ? 'bg-danger'
+                                : 'bg-warning text-dark'
+                            }`}
+                          >
+                            {req.status}
+                          </span>
+                        </div>
+                        {req.status === 'Pending' ? (
+                          <div className="d-flex gap-2 mt-3 pt-2 border-top">
+                            <button
+                              onClick={() => handleUpdateStatus(req._id, 'Accepted')}
+                              className="btn btn-sm btn-success w-50"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(req._id, 'Rejected')}
+                              className="btn btn-sm btn-outline-danger w-50"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-muted small mb-0 mt-2 pt-2 border-top">
+                            Request marked as {req.status}.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

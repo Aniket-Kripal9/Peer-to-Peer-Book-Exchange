@@ -11,7 +11,7 @@ export const getCurrentUser = () => {
   if (!userStr) return null;
   try {
     return JSON.parse(userStr);
-  } catch (err) {
+  } catch {
     return null;
   }
 };
@@ -36,7 +36,11 @@ export const registerUserApi = async (userData) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(userData),
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Registration failed');
+  }
+  return data;
 };
 
 export const loginUserApi = async (credentials) => {
@@ -45,23 +49,48 @@ export const loginUserApi = async (credentials) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials),
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Invalid email or password');
+  }
+  return data;
 };
 
 // --- Books API ---
 export const getBooks = async (params = {}) => {
-  const queryParams = new URLSearchParams();
-  if (params.search) queryParams.append('search', params.search);
-  if (params.category && params.category !== 'All') queryParams.append('category', params.category);
+  try {
+    const queryParams = new URLSearchParams();
+    if (params.search && params.search.trim()) {
+      queryParams.append('search', params.search.trim());
+    }
+    if (params.category && params.category !== 'All') {
+      queryParams.append('category', params.category);
+    }
 
-  const res = await fetch(`${API_URL}/books?${queryParams.toString()}`);
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
+    const qs = queryParams.toString();
+    const url = qs ? `${API_URL}/books?${qs}` : `${API_URL}/books`;
+
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error(`Failed to fetch books: ${res.status}`);
+      return [];
+    }
+    const data = await res.json();
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.books)) return data.books;
+    return [];
+  } catch (err) {
+    console.error('Error fetching books:', err);
+    return [];
+  }
 };
 
 export const getBookById = async (id) => {
   const res = await fetch(`${API_URL}/books/${id}`);
   const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to fetch book');
+  }
   return data._id ? data : data.book;
 };
 
@@ -71,7 +100,11 @@ export const createBook = async (bookData) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(bookData),
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to create book');
+  }
+  return data;
 };
 
 export const updateBook = async (id, bookData) => {
@@ -80,25 +113,36 @@ export const updateBook = async (id, bookData) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(bookData),
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to update book');
+  }
+  return data;
 };
 
 export const deleteBook = async (id) => {
   const res = await fetch(`${API_URL}/books/${id}`, {
     method: 'DELETE',
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to delete book');
+  }
+  return data;
 };
 
-// --- Requests API (Updated with Security Headers) ---
+// --- Requests API ---
 export const getRequests = async (ownerEmail = '') => {
   const user = getCurrentUser();
   const res = await fetch(`${API_URL}/requests?ownerEmail=${ownerEmail}`, {
     headers: {
-      'x-user-id': user?._id || ''
-    }
+      'x-user-id': user?._id || '',
+    },
   });
   const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to fetch requests');
+  }
   return Array.isArray(data) ? data : [];
 };
 
@@ -106,26 +150,34 @@ export const createRequest = async (requestData) => {
   const user = getCurrentUser();
   const res = await fetch(`${API_URL}/requests`, {
     method: 'POST',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
-      'x-user-id': user?._id || ''
+      'x-user-id': user?._id || '',
     },
     body: JSON.stringify(requestData),
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to send exchange request');
+  }
+  return data;
 };
 
 export const updateRequestStatus = async (id, status) => {
   const user = getCurrentUser();
   const res = await fetch(`${API_URL}/requests/${id}`, {
     method: 'PUT',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
-      'x-user-id': user?._id || ''
+      'x-user-id': user?._id || '',
     },
     body: JSON.stringify({ status }),
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to update request');
+  }
+  return data;
 };
 
 export const deleteRequest = async (id) => {
@@ -133,8 +185,12 @@ export const deleteRequest = async (id) => {
   const res = await fetch(`${API_URL}/requests/${id}`, {
     method: 'DELETE',
     headers: {
-      'x-user-id': user?._id || ''
-    }
+      'x-user-id': user?._id || '',
+    },
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to cancel request');
+  }
+  return data;
 };

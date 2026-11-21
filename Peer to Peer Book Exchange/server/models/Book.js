@@ -1,41 +1,53 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const bookSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    author: { type: String, required: true, trim: true },
-    edition: { type: String, default: "" },
-    category: {
+    title: {
       type: String,
       required: true,
-      enum: [
-        "Computer Science",
-        "Mathematics",
-        "Physics",
-        "Chemistry",
-        "Biology",
-        "Engineering",
-        "Literature",
-        "Humanities",
-        "Business",
-        "Other",
-      ],
+      trim: true,
+    },
+    author: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    category: {
+      type: String,
+      default: 'General',
     },
     condition: {
       type: String,
-      required: true,
-      enum: ["New", "Like New", "Good", "Fair", "Poor"],
+      default: 'Good',
     },
-    description: { type: String, required: true },
-    image: { type: String, default: "" },
-    available: { type: Boolean, default: true },
-    ownerName: { type: String, required: true },
-    ownerDepartment: { type: String, default: "" },
-    ownerSemester: { type: String, default: "" },
+    edition: {
+      type: String,
+      default: '',
+    },
+    description: {
+      type: String,
+      default: '',
+    },
+    ownerName: {
+      type: String,
+      required: true,
+    },
+    ownerEmail: {
+      type: String,
+      required: true,
+    },
+    image: {
+      type: String,
+      default: 'https://via.placeholder.com/300x400?text=No+Cover',
+    },
+    status: {
+      type: String,
+      enum: ['Available', 'Exchanged'],
+      default: 'Available',
+    },
   },
-  { timestamps: true }, // adds createdAt & updatedAt automatically
+  { timestamps: true }
 );
 
-const Book = mongoose.model("Book", bookSchema);
-
+const Book = mongoose.model('Book', bookSchema);
 export default Book;

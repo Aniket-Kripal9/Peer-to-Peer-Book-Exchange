@@ -5,335 +5,212 @@ import { getBookById, updateBook, getCurrentUser } from '../api';
 function EditBookPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [notFound, setNotFound] = useState(false);
-
-  useEffect(() => {
-    const user = getCurrentUser();
-    if (!user) {
-      navigate('/login');
-    }
-  }, [navigate]);
+  const currentUser = getCurrentUser();
 
   const [formData, setFormData] = useState({
     title: '',
     author: '',
-    edition: '',
-    category: 'Computer Science',
-    condition: 'Good',
+    category: 'Engineering',
     description: '',
     image: '',
-    available: true,
   });
 
-  const categories = [
-    'Computer Science',
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'Engineering',
-    'Literature',
-    'Humanities',
-    'Business',
-    'Other',
-  ];
-
-  const conditions = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
+  const [pageLoading, setPageLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    let cancelled = false;
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
 
-    async function fetchBook() {
-      setLoading(true);
+    const fetchBook = async () => {
       try {
-        const data = await getBookById(id);
-
-        if (!cancelled) {
-          const bookData =
-            data && (data._id || data.title)
-              ? data
-              : data && data.book
-              ? data.book
-              : null;
-
-          if (bookData) {
-            setFormData({
-              title: bookData.title || '',
-              author: bookData.author || '',
-              edition: bookData.edition || '',
-              category: bookData.category || 'Computer Science',
-              condition: bookData.condition || 'Good',
-              description: bookData.description || '',
-              image: bookData.image || '',
-              available: bookData.available !== undefined ? bookData.available : true,
-            });
-            setNotFound(false);
-            setError('');
-          } else {
-            setNotFound(true);
-          }
+        const book = await getBookById(id);
+        if (!book) {
+          setError('Book not found.');
+          return;
         }
+
+        if (book.ownerEmail !== currentUser.email) {
+          setError('You are not authorized to edit this book.');
+          return;
+        }
+
+        setFormData({
+          title: book.title || '',
+          author: book.author || '',
+          category: book.category || 'Engineering',
+          description: book.description || '',
+          image: book.image || '',
+        });
       } catch (err) {
-        console.error('Error fetching book for edit:', err);
-        if (!cancelled) {
-          setError(err.response?.data?.message || 'Failed to fetch book details.');
-          setNotFound(true);
-        }
+        setError(err.message || 'Failed to load book data.');
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setPageLoading(false);
       }
-    }
-
-    if (id) {
-      fetchBook();
-    }
-
-    return () => {
-      cancelled = true;
     };
-  }, [id]);
+
+    fetchBook();
+  }, [id, currentUser, navigate]);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
     setError('');
 
+    if (!formData.title.trim() || !formData.author.trim()) {
+      setError('Please provide both the book title and author.');
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      await updateBook(id, formData);
+      await updateBook(id, {
+        title: formData.title.trim(),
+        author: formData.author.trim(),
+        category: formData.category,
+        description: formData.description.trim(),
+        image: formData.image.trim() || 'https://via.placeholder.com/300x400?text=No+Cover',
+      });
+
+      // Only navigate away once the server confirms update
       navigate('/dashboard');
     } catch (err) {
-      console.error('Error updating book:', err);
-      setError(err.response?.data?.message || 'Failed to update book listing.');
+      // Display actual server error message to user
+      setError(err.message || 'Failed to update book. Please try again.');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="container py-5 text-center">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading book details...</span>
-        </div>
-      </div>
-    );
-  }
+  if (!currentUser) return null;
 
-  if (notFound) {
+  if (pageLoading) {
     return (
       <div className="container py-5 text-center">
-        <div className="py-5 bg-white rounded-3 shadow-sm p-4 col-md-6 mx-auto">
-          <i className="bi bi-exclamation-triangle fs-1 text-warning"></i>
-          <h3 className="fw-bold mt-3" style={{ color: 'var(--primary-color)' }}>
-            Book Not Found
-          </h3>
-          <p className="text-muted small mb-4">
-            {error || 'The book listing you are trying to edit does not exist.'}
-          </p>
-          <Link to="/dashboard" className="btn btn-primary fw-semibold px-4">
-            &larr; Back to Dashboard
-          </Link>
-        </div>
+        <div className="spinner-border text-primary" role="status"></div>
+        <p className="mt-2 text-muted">Loading book details...</p>
       </div>
     );
   }
 
   return (
-    <div className="container py-5">
+    <div className="container py-4" style={{ minHeight: '80vh' }}>
       <div className="row justify-content-center">
-        <div className="col-md-8 col-lg-7">
-          <div className="card shadow-sm border-0">
-            <div className="card-body p-4 p-md-5">
-              <div className="d-flex align-items-center mb-4">
-                <Link
-                  to="/dashboard"
-                  className="btn btn-outline-secondary btn-sm me-3"
-                  title="Back to Dashboard"
-                >
-                  <i className="bi bi-arrow-left"></i>
-                </Link>
-                <div>
-                  <h3 className="fw-bold mb-0" style={{ color: 'var(--primary-color)' }}>
-                    Edit Book Listing
-                  </h3>
-                  <p className="text-muted small mb-0">
-                    Update details or availability for your book
-                  </p>
-                </div>
+        <div className="col-12 col-md-8 col-lg-6">
+          <div className="card shadow-sm border-0 p-4">
+            <h3 className="fw-bold mb-1" style={{ color: '#2c3e50' }}>
+              Edit Book Listing
+            </h3>
+            <p className="text-muted small mb-4">
+              Update details for your listed book
+            </p>
+
+            {error && <div className="alert alert-danger alert-dismissible">{error}</div>}
+
+            <form onSubmit={handleSubmit}>
+              <div className="mb-3">
+                <label htmlFor="title" className="form-label fw-semibold">
+                  Book Title <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                />
               </div>
 
-              {error && <div className="alert alert-danger py-2 fs-6 mb-4">{error}</div>}
+              <div className="mb-3">
+                <label htmlFor="author" className="form-label fw-semibold">
+                  Author <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  id="author"
+                  name="author"
+                  value={formData.author}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
 
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label className="form-label fw-semibold" htmlFor="edit-title">
-                    Book Title *
-                  </label>
-                  <input
-                    id="edit-title"
-                    type="text"
-                    name="title"
-                    className="form-control"
-                    placeholder="e.g. Operating System Concepts"
-                    value={formData.title}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
+              <div className="mb-3">
+                <label htmlFor="category" className="form-label fw-semibold">
+                  Category
+                </label>
+                <select
+                  className="form-select"
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                >
+                  <option value="Engineering">Engineering</option>
+                  <option value="Science">Science</option>
+                  <option value="Math">Math</option>
+                  <option value="Literature">Literature</option>
+                  <option value="History">History</option>
+                  <option value="Biography">Biography</option>
+                  <option value="Competitive Exams">Competitive Exams</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
 
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold" htmlFor="edit-author">
-                      Author *
-                    </label>
-                    <input
-                      id="edit-author"
-                      type="text"
-                      name="author"
-                      className="form-control"
-                      placeholder="e.g. Abraham Silberschatz"
-                      value={formData.author}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
+              <div className="mb-3">
+                <label htmlFor="image" className="form-label fw-semibold">
+                  Cover Image URL
+                </label>
+                <input
+                  type="url"
+                  className="form-control"
+                  id="image"
+                  name="image"
+                  value={formData.image}
+                  onChange={handleChange}
+                />
+              </div>
 
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold" htmlFor="edit-edition">
-                      Edition
-                    </label>
-                    <input
-                      id="edit-edition"
-                      type="text"
-                      name="edition"
-                      className="form-control"
-                      placeholder="e.g. 10th Edition"
-                      value={formData.edition}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
+              <div className="mb-4">
+                <label htmlFor="description" className="form-label fw-semibold">
+                  Description
+                </label>
+                <textarea
+                  className="form-control"
+                  id="description"
+                  name="description"
+                  rows="3"
+                  value={formData.description}
+                  onChange={handleChange}
+                ></textarea>
+              </div>
 
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold" htmlFor="edit-category">
-                      Category *
-                    </label>
-                    <select
-                      id="edit-category"
-                      name="category"
-                      className="form-select"
-                      value={formData.category}
-                      onChange={handleChange}
-                      required
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="col-md-6 mb-3">
-                    <label className="form-label fw-semibold" htmlFor="edit-condition">
-                      Condition *
-                    </label>
-                    <select
-                      id="edit-condition"
-                      name="condition"
-                      className="form-select"
-                      value={formData.condition}
-                      onChange={handleChange}
-                      required
-                    >
-                      {conditions.map((cond) => (
-                        <option key={cond} value={cond}>
-                          {cond}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label fw-semibold" htmlFor="edit-image">
-                    Cover Image URL
-                  </label>
-                  <input
-                    id="edit-image"
-                    type="url"
-                    name="image"
-                    className="form-control"
-                    placeholder="https://example.com/book-cover.jpg"
-                    value={formData.image}
-                    onChange={handleChange}
-                  />
-                  <div className="form-text small">
-                    Leave blank to keep auto-generated fallback cover.
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="form-label fw-semibold" htmlFor="edit-description">
-                    Description
-                  </label>
-                  <textarea
-                    id="edit-description"
-                    name="description"
-                    rows="4"
-                    className="form-control"
-                    placeholder="Describe the condition, notes, or highlights in the book..."
-                    value={formData.description}
-                    onChange={handleChange}
-                  ></textarea>
-                </div>
-
-                <div className="form-check form-switch mb-4 p-3 bg-light rounded-3">
-                  <input
-                    className="form-check-input ms-0 me-2"
-                    type="checkbox"
-                    id="edit-available"
-                    name="available"
-                    checked={formData.available}
-                    onChange={handleChange}
-                  />
-                  <label className="form-check-label fw-semibold" htmlFor="edit-available">
-                    Available for Swap
-                  </label>
-                  <div className="text-muted small">
-                    Uncheck if this book has been exchanged or is temporarily unavailable.
-                  </div>
-                </div>
-
-                <div className="d-flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="btn btn-primary fw-semibold px-4 py-2 flex-grow-1"
-                  >
-                    {saving ? 'Saving Changes...' : 'Save Changes'}
-                  </button>
-                  <Link to="/dashboard" className="btn btn-outline-secondary px-4 py-2">
-                    Cancel
-                  </Link>
-                </div>
-              </form>
-            </div>
+              <div className="d-flex gap-2">
+                <Link to="/dashboard" className="btn btn-outline-secondary w-50">
+                  Cancel
+                </Link>
+                <button
+                  type="submit"
+                  className="btn btn-primary w-50 fw-semibold"
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
